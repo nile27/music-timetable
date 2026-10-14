@@ -1,16 +1,15 @@
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { IPC } from '../shared/ipc-channels';
-import { handleMediaProtocol, registerMediaScheme, setAllowedMediaRoots } from './media-protocol';
-import { findTestTrack } from './test-track';
+import type { Track } from '../shared/types';
+import { getDefaultCoverDir, getMusicDir } from './app-paths';
+import { MusicLibrary } from './library';
+import { handleMediaProtocol, registerMediaScheme, setMediaRoots } from './media-protocol';
 
 // electron-builder.yml의 appId와 같아야 Windows 작업 표시줄·알림에서 같은 앱으로 묶인다.
 const APP_USER_MODEL_ID = 'com.music-timetable.app';
 const WINDOW_WIDTH = 960;
 const WINDOW_HEIGHT = 640;
-
-// 1단계: 개발 중에는 프로젝트의 music/ 폴더를 쓴다. 2단계에서 사용자 음악 폴더로 바꾼다.
-const MUSIC_DIR = path.join(app.getAppPath(), 'music');
 
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
@@ -32,6 +31,7 @@ function createWindow(): BrowserWindow {
   window.on('ready-to-show', () => window.show());
 
   // 오프라인 앱이라 새 창·외부 페이지 이동은 모두 막는다.
+  // 파일을 창 밖 엉뚱한 곳에 떨어뜨려도 그 파일로 이동하지 않게 하는 역할도 한다.
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', (event) => event.preventDefault());
 
@@ -44,14 +44,34 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
-function registerIpcHandlers(): void {
+/** 화면에서 온 값은 믿지 않는다: 문자열 배열인지 확인한다. */
+function toPathList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+}
+
+function registerIpcHandlers(library: MusicLibrary, musicDir: string): void {
   // 무엇을 틀지는 메인이 정한다 (판단은 main, 소리는 renderer).
-  ipcMain.on(IPC.PLAYER_REQUEST_PLAY, async (event) => {
-    const track = await findTestTrack(MUSIC_DIR);
-    if (track) event.sender.send(IPC.PLAYER_PLAY, track);
+  // 2단계: 목록의 첫 곡. 다음 곡 번호 계산은 3단계 스케줄러에서 한다.
+  ipcMain.on(IPC.PLAYER_REQUEST_PLAY, (event) => {
+    const first = library.getTracks()[0];
+    if (!first) {
+      console.warn('[player] 재생할 곡이 없습니다');
+      return;
+    }
+    const track: Track = { title: first.title, url: first.url };
+    event.sender.send(IPC.PLAYER_PLAY, track);
   });
   ipcMain.on(IPC.PLAYER_REQUEST_STOP, (event) => {
     event.sender.send(IPC.PLAYER_STOP);
+  });
+
+  ipcMain.handle(IPC.LIBRARY_LIST, () => library.getTracks());
+  ipcMain.handle(IPC.LIBRARY_ADD, (_event, paths: unknown) => library.addFiles(toPathList(paths)));
+  ipcMain.on(IPC.LIBRARY_OPEN_FOLDER, () => {
+    void shell.openPath(musicDir).then((error) => {
+      if (error) console.warn(`[library] 폴더를 열지 못했습니다: ${error}`);
+    });
   });
 }
 
@@ -63,10 +83,25 @@ void app.whenReady().then(async () => {
     app.setAppUserModelId(app.isPackaged ? APP_USER_MODEL_ID : process.execPath);
   }
 
-  await setAllowedMediaRoots([MUSIC_DIR]);
+  const musicDir = getMusicDir();
+  const defaultCoverDir = getDefaultCoverDir();
+  // "내 음악"이 OneDrive 등으로 옮겨진 PC가 있어 실제 위치를 남긴다. (5단계에서 electron-log로 옮김)
+  console.info(`[app] 음악 폴더: ${musicDir}`);
+  console.info(`[app] 기본 커버 폴더: ${defaultCoverDir}`);
+
+  const library = new MusicLibrary(musicDir, defaultCoverDir, (tracks) => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      window.webContents.send(IPC.LIBRARY_CHANGED, tracks);
+    }
+  });
+  // 음악 폴더를 먼저 만들어야 realpath로 허용 폴더를 정할 수 있다.
+  await library.start();
+  await setMediaRoots({ music: [musicDir], defaultCovers: [defaultCoverDir] });
   handleMediaProtocol();
-  registerIpcHandlers();
+  registerIpcHandlers(library, musicDir);
   createWindow();
+
+  app.on('will-quit', () => library.stop());
 });
 
 // X를 누르면 바로 종료한다 (트레이·종료 확인 없음). macOS도 개발 확인을 위해 같게 맞춘다.

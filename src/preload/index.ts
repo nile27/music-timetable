@@ -1,22 +1,30 @@
 // 화면에는 window.api 하나만 노출한다. ipcRenderer를 그대로 넘기면 화면이 아무 채널이나
 // 부를 수 있게 되므로, 필요한 기능만 함수로 감싸서 준다.
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import { IPC } from '../shared/ipc-channels';
-import type { RendererApi, Track } from '../shared/types';
+import type { AddFilesResult, LibraryTrack, RendererApi, Track } from '../shared/types';
+
+/** 메인 → 화면 이벤트 구독을 만들고, 해제 함수를 돌려준다. */
+function subscribe<T>(channel: string, listener: (payload: T) => void): () => void {
+  const handler = (_event: IpcRendererEvent, payload: T): void => listener(payload);
+  ipcRenderer.on(channel, handler);
+  return () => ipcRenderer.removeListener(channel, handler);
+}
 
 const api: RendererApi = {
   requestPlay: () => ipcRenderer.send(IPC.PLAYER_REQUEST_PLAY),
   requestStop: () => ipcRenderer.send(IPC.PLAYER_REQUEST_STOP),
-  onPlay: (listener) => {
-    const handler = (_event: IpcRendererEvent, track: Track): void => listener(track);
-    ipcRenderer.on(IPC.PLAYER_PLAY, handler);
-    return () => ipcRenderer.removeListener(IPC.PLAYER_PLAY, handler);
+  onPlay: (listener) => subscribe<Track>(IPC.PLAYER_PLAY, listener),
+  onStop: (listener) => subscribe<void>(IPC.PLAYER_STOP, () => listener()),
+
+  listTracks: () => ipcRenderer.invoke(IPC.LIBRARY_LIST) as Promise<LibraryTrack[]>,
+  onLibraryChanged: (listener) => subscribe<LibraryTrack[]>(IPC.LIBRARY_CHANGED, listener),
+  addFiles: (files) => {
+    // File.path는 Electron 32부터 없어졌다. 실제 경로는 preload에서만 얻을 수 있다.
+    const paths = files.map((file) => webUtils.getPathForFile(file)).filter((p) => p !== '');
+    return ipcRenderer.invoke(IPC.LIBRARY_ADD, paths) as Promise<AddFilesResult>;
   },
-  onStop: (listener) => {
-    const handler = (): void => listener();
-    ipcRenderer.on(IPC.PLAYER_STOP, handler);
-    return () => ipcRenderer.removeListener(IPC.PLAYER_STOP, handler);
-  },
+  openMusicFolder: () => ipcRenderer.send(IPC.LIBRARY_OPEN_FOLDER),
 };
 
 contextBridge.exposeInMainWorld('api', api);

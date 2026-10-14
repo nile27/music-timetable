@@ -1,6 +1,7 @@
 import './style.css';
 import { MESSAGES } from './messages';
 import { AudioPlayer } from './player';
+import { setupLibraryView } from './library-view';
 
 function getElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -38,6 +39,15 @@ function init(): void {
   window.api.onStop(() => {
     player.stop();
     status.textContent = MESSAGES.statusStopped;
+  });
+
+  setupLibraryView({
+    dropZone: getElement('drop-zone'),
+    dropMessage: getElement('drop-message'),
+    count: getElement('track-count'),
+    openFolderButton: getElement<HTMLButtonElement>('open-folder-button'),
+    list: getElement<HTMLUListElement>('track-list'),
+    empty: getElement('empty-library'),
   });
 }
 

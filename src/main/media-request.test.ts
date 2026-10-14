@@ -1,6 +1,11 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { getAudioMimeType, parseRangeHeader, resolveAllowedPath } from './media-request';
+import {
+  getAudioMimeType,
+  getImageMimeType,
+  parseRangeHeader,
+  resolveAllowedPath,
+} from './media-request';
 
 describe('resolveAllowedPath (Windows)', () => {
   const roots = ['C:\\Users\\연구원\\Music\\음악 시간표'];
@@ -118,5 +123,20 @@ describe('getAudioMimeType', () => {
 
   it.each(['.txt', '.exe', ''])('%s → null', (ext) => {
     expect(getAudioMimeType(ext)).toBeNull();
+  });
+});
+
+describe('getImageMimeType', () => {
+  it.each([
+    ['.jpg', 'image/jpeg'],
+    ['.JPEG', 'image/jpeg'],
+    ['.png', 'image/png'],
+    ['.webp', 'image/webp'],
+  ])('%s → %s', (ext, mime) => {
+    expect(getImageMimeType(ext)).toBe(mime);
+  });
+
+  it.each(['.md', '.mp3', '.svg'])('%s → null', (ext) => {
+    expect(getImageMimeType(ext)).toBeNull();
   });
 });

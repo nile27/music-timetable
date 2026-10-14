@@ -9,6 +9,15 @@ export const IPC = {
   PLAYER_PLAY: 'player:play',
   /** 메인 → 화면: 즉시 정지하라. */
   PLAYER_STOP: 'player:stop',
+
+  /** 화면 → 메인 (invoke): 곡 목록 요청 → LibraryTrack[] */
+  LIBRARY_LIST: 'library:list',
+  /** 메인 → 화면: 음악 폴더가 바뀌었다 (LibraryTrack[]). */
+  LIBRARY_CHANGED: 'library:changed',
+  /** 화면 → 메인 (invoke): 드롭한 파일 경로 목록 → AddFilesResult */
+  LIBRARY_ADD: 'library:add',
+  /** 화면 → 메인: 음악 폴더를 탐색기로 연다. */
+  LIBRARY_OPEN_FOLDER: 'library:openFolder',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

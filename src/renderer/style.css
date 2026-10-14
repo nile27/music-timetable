@@ -1,8 +1,12 @@
-/* 1단계 확인용 최소 스타일. 실제 디자인은 6단계에서 Figma 기준으로 교체한다. */
+/* 확인용 최소 스타일. 실제 디자인은 6단계에서 Figma 기준으로 교체한다. */
 :root {
   font-family: 'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif;
   color: #1f2328;
   background: #f6f7f9;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -10,8 +14,13 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+.player {
+  display: flex;
   align-items: center;
-  justify-content: center;
   gap: 16px;
 }
 
@@ -38,4 +47,106 @@ button:hover {
 #status {
   margin: 0;
   font-size: 15px;
+}
+
+.library {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: 12px;
+  border: 2px dashed #c9ccd1;
+  border-radius: 12px;
+  background: #fff;
+  text-align: center;
+  white-space: pre-line;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.drop-zone.is-dragging {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.drop-zone p {
+  margin: 0;
+}
+
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.empty {
+  margin: 24px 0;
+  text-align: center;
+  color: #6b7280;
+}
+
+.track-list {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.track-number {
+  width: 28px;
+  text-align: right;
+  color: #6b7280;
+}
+
+/* 커버 이미지가 없을 때 보이는 단색 배경 */
+.cover {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #9ca3af;
+}
+
+.cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.track-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.track-title,
+.track-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-artist {
+  font-size: 13px;
+  color: #6b7280;
 }

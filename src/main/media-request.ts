@@ -69,3 +69,15 @@ const AUDIO_MIME_TYPES: Readonly<Record<string, string>> = {
 export function getAudioMimeType(extension: string): string | null {
   return AUDIO_MIME_TYPES[extension.toLowerCase()] ?? null;
 }
+
+const IMAGE_MIME_TYPES: Readonly<Record<string, string>> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
+/** 확장자(점 포함)로 기본 커버 이미지의 MIME 타입을 정한다. 지원하지 않는 형식이면 null. */
+export function getImageMimeType(extension: string): string | null {
+  return IMAGE_MIME_TYPES[extension.toLowerCase()] ?? null;
+}

@@ -35,6 +35,14 @@ UI는 프레임워크 없이 HTML/CSS/TS. **목록에 없는 라이브러리는 
 - `app.requestSingleInstanceLock()`으로 중복 실행을 막는다.
 - 시간표 기본값: 등교 08:30~09:00, 점심 13:00~14:00, 하교 17:50~18:30. 구간은 시작 포함·종료 미포함.
 
+## 확정 사항 (2단계에서 결정)
+- 앱 이름: "음악 시간표" (영문·패키지명 `music-timetable`)
+- 음악 폴더: 내 음악/음악 시간표 (`app.getPath('music')` 아래, `src/main/app-paths.ts`)
+- 재생 순서: 파일 이름 자연 정렬 (한글 가나다, 숫자 크기순). 곡 삭제·순서 변경 UI는 MVP에서 만들지 않음 (순서는 파일 이름, 삭제는 탐색기)
+- 같은 이름 파일을 드롭하면 덮어쓰지 않고 건너뛴 뒤 안내
+- 기본 커버: `resources/cover`의 jpg·png·webp를 곡 파일 이름 해시로 배정, 없으면 단색. 출처는 `resources/cover/CREDITS.md`
+- 새벽 자동 재시작: 03:00
+
 ## 금지 사항
 - `toISOString()`으로 날짜 만들기 (UTC라 한국 오전 9시 전 날짜가 하루 밀린다) → shared 날짜 유틸 사용
 - 드래그앤드롭에서 `file.path` 사용 (Electron 32부터 제거) → preload에서 `webUtils.getPathForFile`

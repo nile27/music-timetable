@@ -3,20 +3,34 @@
   <head>
     <meta charset="UTF-8" />
     <title></title>
-    <!-- 오프라인 앱: 로컬 자원과 media:// 음악만 허용한다 -->
+    <!-- 오프라인 앱: 로컬 자원과 media:// (음악·커버)만 허용한다 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self' media:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: media:; media-src 'self' media:"
     />
   </head>
 
   <body>
     <!-- 문구는 messages.ts에서 채운다 -->
-    <div class="controls">
-      <button id="play-button" type="button"></button>
-      <button id="stop-button" type="button"></button>
-    </div>
-    <p id="status" aria-live="polite"></p>
+    <section class="player">
+      <div class="controls">
+        <button id="play-button" type="button"></button>
+        <button id="stop-button" type="button"></button>
+      </div>
+      <p id="status" aria-live="polite"></p>
+    </section>
+
+    <section class="library">
+      <div id="drop-zone" class="drop-zone">
+        <p id="drop-message" aria-live="polite"></p>
+      </div>
+      <div class="library-header">
+        <span id="track-count"></span>
+        <button id="open-folder-button" type="button"></button>
+      </div>
+      <p id="empty-library" class="empty" hidden></p>
+      <ul id="track-list" class="track-list"></ul>
+    </section>
 
     <script type="module" src="./renderer.ts"></script>
   </body>

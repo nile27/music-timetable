@@ -14,8 +14,18 @@ files:
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CLAUDE.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  # 기본 커버는 아래 extraResources로 따로 넣으므로 asar에는 중복으로 넣지 않는다.
+  - '!resources/cover/**'
 asarUnpack:
   - resources/**
+# 기본 커버 이미지: 설치 폴더의 resources/cover로 복사된다 (src/main/app-paths.ts getDefaultCoverDir).
+# CREDITS.md도 함께 넣어 이미지 출처·라이선스 표기를 배포판에 남긴다.
+extraResources:
+  - from: resources/cover
+    to: cover
+    filter:
+      - '*.{jpg,jpeg,png,webp,JPG,JPEG,PNG,WEBP}'
+      - CREDITS.md
 win:
   executableName: music-timetable
 nsis:
