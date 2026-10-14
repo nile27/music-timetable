@@ -24,6 +24,7 @@ body {
 
 .column {
   min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -255,4 +256,98 @@ button:hover {
 
 .track.is-next .next-mark {
   display: inline;
+}
+
+.skip-today {
+  align-self: flex-start;
+}
+
+.skip-today[aria-pressed='true'] {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.off-days h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.hint {
+  margin: 4px 0 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.calendar-header button {
+  min-width: 0;
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.day {
+  min-width: 0;
+  height: 48px;
+  padding: 2px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-radius: 6px;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.day-label {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.day:disabled {
+  cursor: default;
+}
+
+.day.is-weekend {
+  background: #eceef1;
+  color: #9ca3af;
+}
+
+.day.is-holiday {
+  background: #fde8e8;
+  color: #b91c1c;
+}
+
+.day.is-off-day {
+  background: #fff7ed;
+  border-color: #f97316;
+  color: #c2410c;
+}
+
+.day.is-today {
+  outline: 2px solid #3b82f6;
+  outline-offset: -2px;
 }

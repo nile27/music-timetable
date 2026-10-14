@@ -1,8 +1,16 @@
 // Scheduler: 매초 판정 규칙(scheduler-rules)을 돌리고 그 결과대로 화면에 재생·정지를 지시한다.
 // 특정 시각에 알람을 거는 방식(setTimeout)은 늦게 켜진 경우를 놓치므로 쓰지 않는다.
-import { findActiveSlot, findNextSlot } from '../shared/schedule';
+import { findNextPlay, getOffDayReason, type DayContext } from '../shared/day-rules';
+import { findActiveSlot } from '../shared/schedule';
 import { toDateKey } from '../shared/time';
-import type { AppSettings, LibraryTrack, PlayerStatus, Track } from '../shared/types';
+import type {
+  AppSettings,
+  LibraryTrack,
+  OffDayReason,
+  PlayerStatus,
+  ScheduleSlot,
+  Track,
+} from '../shared/types';
 import {
   decideManualPlay,
   decideStop,
@@ -21,6 +29,8 @@ const TICK_INTERVAL_MS = 1000;
 export interface SchedulerDeps {
   getTracks: () => readonly LibraryTrack[];
   getSettings: () => AppSettings;
+  /** 공휴일 (HolidayProvider에서 받아 둔 것). */
+  getHolidays: () => ReadonlyMap<string, string>;
   saveNextIndex: (nextIndex: number) => void;
   play: (track: Track) => void;
   stop: () => void;
@@ -36,6 +46,8 @@ export class Scheduler {
   private consecutiveFailures = 0;
   private timer: NodeJS.Timeout | null = null;
   private lastStatusJson = '';
+  /** 휴무일이라 건너뛴 구간 로그를 구간마다 한 번만 남기기 위함. */
+  private lastSkipLogKey = '';
 
   constructor(private readonly deps: SchedulerDeps) {}
 
@@ -70,6 +82,18 @@ export class Scheduler {
     this.apply(decideStop(this.state, this.getActiveSlotKey()));
   }
 
+  /**
+   * "오늘은 재생 안 함"을 켜면 재생 중인 음악(수동 재생 포함)을 바로 멈춘다 (S-01).
+   * 끄면 다음 판정에서 구간 안이면 다시 재생된다. 날짜 저장은 호출하는 쪽이 먼저 한다.
+   */
+  handleSkipTodayChanged(isSkipping: boolean): void {
+    if (isSkipping) {
+      this.apply(decideStop(this.state, null));
+    } else {
+      this.tick();
+    }
+  }
+
   /** 곡이 끝남 → 다음 곡 (재생 중일 때만). 이전 곡의 늦은 알림은 무시한다. */
   handleEnded(trackId: unknown): void {
     if (this.state.mode === 'idle' || trackId !== this.currentTrackId) return;
@@ -92,13 +116,18 @@ export class Scheduler {
 
   getStatus(): PlayerStatus {
     const now = this.now();
-    const { schedule, nextIndex } = this.deps.getSettings();
+    const settings = this.deps.getSettings();
+    const { schedule, nextIndex } = settings;
     const tracks = this.deps.getTracks();
-    const activeSlot = findActiveSlot(schedule, now);
+    const context = this.getDayContext();
+    const offDayReason = getOffDayReason(now, context);
+    const activeSlot = offDayReason ? null : findActiveSlot(schedule, now);
     return {
       mode: this.state.mode,
+      offDayReason,
+      isSkippingToday: settings.skipDate === toDateKey(now),
       activeSlot,
-      nextSlot: findNextSlot(schedule, now),
+      nextPlay: findNextPlay(schedule, now, context),
       currentTrackId: this.currentTrackId,
       nextTrackId: tracks[normalizeIndex(nextIndex, tracks.length)]?.id ?? null,
       isMissingTracks: activeSlot !== null && tracks.length === 0,
@@ -109,9 +138,32 @@ export class Scheduler {
     return this.deps.now?.() ?? new Date();
   }
 
+  private getDayContext(): DayContext {
+    const { offDays, skipDate } = this.deps.getSettings();
+    return { holidays: this.deps.getHolidays(), offDays, skipDate };
+  }
+
+  /**
+   * 지금 재생해야 하는 구간의 키. 쉬는 날이면 구간 안이어도 null (= 재생하지 않음).
+   * 매초 그 시점의 날짜로 다시 판정하므로 며칠을 켜 둬도 날짜가 바뀌면 바로 반영된다 (NFR-02).
+   */
   private getActiveSlotKey(): SlotKey {
     const now = this.now();
-    return toSlotKey(toDateKey(now), findActiveSlot(this.deps.getSettings().schedule, now));
+    const slot = findActiveSlot(this.deps.getSettings().schedule, now);
+    const offDayReason = slot ? getOffDayReason(now, this.getDayContext()) : null;
+    if (slot && offDayReason) {
+      this.logSkippedSlot(toDateKey(now), slot, offDayReason);
+      return null;
+    }
+    return toSlotKey(toDateKey(now), slot);
+  }
+
+  private logSkippedSlot(dateKey: string, slot: ScheduleSlot, reason: OffDayReason): void {
+    const key = toSlotKey(dateKey, slot) ?? '';
+    if (key === this.lastSkipLogKey) return;
+    this.lastSkipLogKey = key;
+    const detail = reason.kind === 'holiday' ? `holiday:${reason.name}` : reason.kind;
+    console.info(`[scheduler] 휴무일이라 건너뜀: ${dateKey} ${slot.name} (${detail})`);
   }
 
   private apply(decision: Decision): void {

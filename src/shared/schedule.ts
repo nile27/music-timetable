@@ -33,23 +33,6 @@ export function findActiveSlot(slots: readonly ScheduleSlot[], now: Date): Sched
   );
 }
 
-export interface NextSlot {
-  slot: ScheduleSlot;
-  /** 오늘 남은 구간이 없어서 내일 첫 구간인 경우. */
-  isTomorrow: boolean;
-}
-
-/** 다음에 시작할 구간 (지금 진행 중인 구간은 제외). 주말·휴일 반영은 4단계. */
-export function findNextSlot(slots: readonly ScheduleSlot[], now: Date): NextSlot | null {
-  const minutes = getMinutesOfDay(now);
-  const ranges = toRanges(slots).sort((a, b) => a.start - b.start);
-  if (ranges.length === 0) return null;
-  const later = ranges.find((range) => range.start > minutes);
-  return later
-    ? { slot: later.slot, isTomorrow: false }
-    : { slot: ranges[0].slot, isTomorrow: true };
-}
-
 export type ScheduleIssueReason =
   'empty-name' | 'invalid-time' | 'start-not-before-end' | 'overlap';
 

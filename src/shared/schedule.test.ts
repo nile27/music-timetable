@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_SCHEDULE,
-  findActiveSlot,
-  findNextSlot,
-  normalizeSchedule,
-  validateSchedule,
-} from './schedule';
+import { DEFAULT_SCHEDULE, findActiveSlot, normalizeSchedule, validateSchedule } from './schedule';
 import type { ScheduleSlot } from './types';
 
 const at = (hours: number, minutes: number, seconds = 0): Date =>
@@ -42,40 +36,6 @@ describe('findActiveSlot (기본 시간표 경계)', () => {
     ];
     expect(findActiveSlot(slots, at(10, 29, 59))?.name).toBe('A');
     expect(findActiveSlot(slots, at(10, 30))?.name).toBe('B');
-  });
-});
-
-describe('findNextSlot', () => {
-  it('구간 전이면 오늘 다음 구간', () => {
-    expect(findNextSlot(DEFAULT_SCHEDULE, at(7, 0))).toEqual({
-      slot: DEFAULT_SCHEDULE[0],
-      isTomorrow: false,
-    });
-  });
-
-  it('구간 진행 중이면 그다음 구간', () => {
-    expect(findNextSlot(DEFAULT_SCHEDULE, at(8, 45))?.slot.name).toBe('점심');
-  });
-
-  it('시작 시각과 같은 분이면 이미 시작한 것으로 본다', () => {
-    expect(findNextSlot(DEFAULT_SCHEDULE, at(13, 0))?.slot.name).toBe('하교');
-  });
-
-  it('마지막 구간 뒤면 내일 첫 구간', () => {
-    expect(findNextSlot(DEFAULT_SCHEDULE, at(20, 0))).toEqual({
-      slot: DEFAULT_SCHEDULE[0],
-      isTomorrow: true,
-    });
-  });
-
-  it('입력 순서가 섞여 있어도 시작 시각 기준', () => {
-    const shuffled = [DEFAULT_SCHEDULE[2], DEFAULT_SCHEDULE[0], DEFAULT_SCHEDULE[1]];
-    expect(findNextSlot(shuffled, at(10, 0))?.slot.name).toBe('점심');
-    expect(findNextSlot(shuffled, at(19, 0))?.slot.name).toBe('등교');
-  });
-
-  it('구간이 없으면 null', () => {
-    expect(findNextSlot([], at(10, 0))).toBeNull();
   });
 });
 

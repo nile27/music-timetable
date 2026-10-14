@@ -1,7 +1,8 @@
 // 사용자에게 보이는 문구는 모두 여기에 모은다 (화면 코드에 직접 쓰지 않는다).
 import type { ScheduleIssueReason } from '../shared/schedule';
 import { toClock12 } from '../shared/time';
-import type { ScheduleSlot } from '../shared/types';
+import { parseDateKey } from '../shared/day-rules';
+import type { NextPlay, OffDayReason, ScheduleSlot } from '../shared/types';
 
 /** "13:00" → "오후 1:00". 형식이 틀리면 그대로 돌려준다. */
 function formatClock(time: string): string {
@@ -11,6 +12,30 @@ function formatClock(time: string): string {
 }
 
 const formatRange = (slot: ScheduleSlot): string => `${slot.start} ~ ${slot.end}`;
+
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
+/** 다음 재생 날짜: 오늘이면 생략, 내일이면 "내일", 그 뒤면 "10월 19일 (월)". */
+function formatPlayDay(nextPlay: NextPlay): string {
+  if (nextPlay.daysFromToday === 0) return '';
+  if (nextPlay.daysFromToday === 1) return '내일 ';
+  const date = parseDateKey(nextPlay.dateKey);
+  if (!date) return `${nextPlay.dateKey} `;
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]}) `;
+}
+
+function describeOffDayReason(reason: OffDayReason): string {
+  switch (reason.kind) {
+    case 'weekend':
+      return '주말';
+    case 'holiday':
+      return reason.name;
+    case 'off-day':
+      return '쉬는 날로 지정한 날';
+    case 'skip-today':
+      return '오늘은 재생 안 함';
+  }
+}
 
 export const MESSAGES = {
   appTitle: '음악 시간표',
@@ -22,8 +47,12 @@ export const MESSAGES = {
   statusPlayingSlot: (slot: ScheduleSlot): string => `재생 중: ${slot.name} (${formatRange(slot)})`,
   statusManual: '직접 재생 중',
   statusStoppedInSlot: (slot: ScheduleSlot): string => `이번 ${slot.name} 시간은 정지했어요`,
-  statusNext: (slot: ScheduleSlot, isTomorrow: boolean): string =>
-    `다음 재생: ${isTomorrow ? '내일 ' : ''}${formatClock(slot.start)} ${slot.name}`,
+  statusNext: (nextPlay: NextPlay): string =>
+    `다음 재생: ${formatPlayDay(nextPlay)}${formatClock(nextPlay.slot.start)} ${nextPlay.slot.name}`,
+  statusOffDay: (reason: OffDayReason): string =>
+    `오늘은 쉬는 날이에요 (${describeOffDayReason(reason)})`,
+  skipToday: '오늘은 재생 안 함',
+  unskipToday: '오늘 다시 재생하기',
   statusNoSchedule: '시간표가 비어 있어요. 시간을 추가해주세요.',
   statusNoTracks: '재생할 노래가 없어요. 노래 탭에서 추가해주세요.',
   nowPlaying: (title: string): string => `♪ ${title}`,
@@ -45,6 +74,15 @@ export const MESSAGES = {
     'start-not-before-end': '끝나는 시간이 시작 시간보다 빨라요.',
     overlap: '다른 시간과 겹쳐요.',
   } satisfies Record<ScheduleIssueReason, string>,
+
+  // 쉬는 날 달력 (S-02)
+  offDayTitle: '쉬는 날',
+  offDayHint: '평일을 누르면 쉬는 날로 지정하거나 해제해요. 주말·공휴일은 자동으로 쉬어요.',
+  monthTitle: (year: number, month: number): string => `${year}년 ${month}월`,
+  previousMonth: '‹ 이전 달',
+  nextMonth: '다음 달 ›',
+  weekdays: WEEKDAYS,
+  offDayMark: '쉬는 날',
 
   // 노래 화면 (S-03)
   dropHint: '여기에 음악 파일을 끌어다 놓으세요',

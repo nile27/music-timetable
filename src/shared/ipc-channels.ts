@@ -26,6 +26,13 @@ export const IPC = {
   /** 화면 → 메인: 볼륨 변경 (0~1). 바꾸는 즉시 저장한다. */
   SETTINGS_SET_VOLUME: 'settings:setVolume',
 
+  /** 화면 → 메인: "오늘은 재생 안 함" 켜기/끄기 (boolean). */
+  DAY_SKIP_TODAY: 'day:skipToday',
+  /** 화면 → 메인 (invoke): 쉬는 날 지정/해제 ("YYYY-MM-DD") → 바뀐 offDays */
+  DAY_TOGGLE_OFF_DAY: 'day:toggleOffDay',
+  /** 화면 → 메인 (invoke): 내장 공휴일 목록 (달력 표시용) → HolidayData */
+  DAY_HOLIDAYS: 'day:holidays',
+
   /** 화면 → 메인 (invoke): 곡 목록 요청 → LibraryTrack[] */
   LIBRARY_LIST: 'library:list',
   /** 메인 → 화면: 음악 폴더가 바뀌었다 (LibraryTrack[]). */

@@ -1,9 +1,12 @@
 import path from 'node:path';
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import { IPC } from '../shared/ipc-channels';
+import { isWeekend, parseDateKey } from '../shared/day-rules';
 import { normalizeSchedule, validateSchedule } from '../shared/schedule';
-import type { SaveScheduleResult, ScheduleSlot } from '../shared/types';
+import { toDateKey } from '../shared/time';
+import type { HolidayData, SaveScheduleResult, ScheduleSlot } from '../shared/types';
 import { getDefaultCoverDir, getMusicDir } from './app-paths';
+import { bundledHolidayProvider, toHolidayMap } from './holiday-provider';
 import { MusicLibrary } from './library';
 import { handleMediaProtocol, registerMediaScheme, setMediaRoots } from './media-protocol';
 import { Scheduler } from './scheduler';
@@ -58,10 +61,13 @@ interface AppServices {
   library: MusicLibrary;
   settings: SettingsStore;
   scheduler: Scheduler;
+  holidayData: HolidayData;
   musicDir: string;
 }
 
-function registerIpcHandlers({ library, settings, scheduler, musicDir }: AppServices): void {
+function registerIpcHandlers(services: AppServices): void {
+  const { library, settings, scheduler, holidayData, musicDir } = services;
+  const holidayMap = toHolidayMap(holidayData);
   // 무엇을 틀지는 메인(스케줄러)이 정한다 (판단은 main, 소리는 renderer).
   ipcMain.on(IPC.PLAYER_REQUEST_PLAY, () => scheduler.requestPlay());
   ipcMain.on(IPC.PLAYER_REQUEST_STOP, () => scheduler.requestStop());
@@ -86,6 +92,29 @@ function registerIpcHandlers({ library, settings, scheduler, musicDir }: AppServ
     const volume = parseVolume(value);
     if (volume !== null) void settings.save({ volume });
   });
+
+  ipcMain.on(IPC.DAY_SKIP_TODAY, (_event, value: unknown) => {
+    if (typeof value !== 'boolean') return;
+    // 오늘 날짜를 저장해 두면 날짜가 바뀌는 순간 판정에서 빠지므로 "다음 날 자동 해제"가 된다.
+    void settings.save({ skipDate: value ? toDateKey(new Date()) : null });
+    console.info(`[day] 오늘은 재생 안 함: ${value ? '켜짐' : '꺼짐'}`);
+    scheduler.handleSkipTodayChanged(value);
+  });
+  ipcMain.handle(IPC.DAY_TOGGLE_OFF_DAY, async (_event, value: unknown): Promise<string[]> => {
+    const { offDays } = settings.get();
+    // 주말·공휴일은 원래 쉬므로 지정 대상이 아니다 (달력에서도 누를 수 없게 막지만 다시 검사).
+    const date = typeof value === 'string' ? parseDateKey(value) : null;
+    if (!date || isWeekend(date) || holidayMap.has(value as string)) return offDays;
+    const dateKey = value as string;
+    const next = offDays.includes(dateKey)
+      ? offDays.filter((day) => day !== dateKey)
+      : [...offDays, dateKey].sort();
+    await settings.save({ offDays: next });
+    console.info(`[day] 쉬는 날 ${offDays.includes(dateKey) ? '해제' : '지정'}: ${dateKey}`);
+    scheduler.tick();
+    return next;
+  });
+  ipcMain.handle(IPC.DAY_HOLIDAYS, () => holidayData);
 
   ipcMain.handle(IPC.LIBRARY_LIST, () => library.getTracks());
   ipcMain.handle(IPC.LIBRARY_ADD, (_event, paths: unknown) => library.addFiles(toPathList(paths)));
@@ -141,15 +170,26 @@ void app.whenReady().then(async () => {
   await setMediaRoots({ music: [musicDir], defaultCovers: [defaultCoverDir] });
   handleMediaProtocol();
 
+  const holidayData = await bundledHolidayProvider();
+  const holidayMap = toHolidayMap(holidayData);
+  console.info(
+    `[holiday] 공휴일 ${holidayData.holidays.length}개, 수록 연도: ${holidayData.years.join(', ')}`,
+  );
+  if (!holidayData.years.includes(new Date().getFullYear())) {
+    // 수록 연도가 지나면 공휴일에도 재생된다. 앱 업데이트가 필요하다는 신호.
+    console.warn('[holiday] 올해 공휴일 정보가 없습니다. 앱 업데이트가 필요합니다');
+  }
+
   const scheduler = new Scheduler({
     getTracks: () => library.getTracks(),
     getSettings: () => settings.get(),
+    getHolidays: () => holidayMap,
     saveNextIndex: (nextIndex) => void settings.save({ nextIndex }),
     play: (track) => sendToWindows(IPC.PLAYER_PLAY, track),
     stop: () => sendToWindows(IPC.PLAYER_STOP),
     publishStatus: (status) => sendToWindows(IPC.STATUS_UPDATE, status),
   });
-  registerIpcHandlers({ library, settings, scheduler, musicDir });
+  registerIpcHandlers({ library, settings, scheduler, holidayData, musicDir });
 
   const window = createWindow();
   // 화면이 다 뜬 뒤에 판정을 시작해야 재생 지시가 허공으로 사라지지 않는다.

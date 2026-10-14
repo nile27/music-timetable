@@ -65,12 +65,42 @@ export interface AppSettings {
  */
 export type PlayMode = 'idle' | 'playing' | 'manual';
 
+/** 내장 공휴일 하나. date는 "YYYY-MM-DD". */
+export interface Holiday {
+  date: string;
+  name: string;
+}
+
+/** 공휴일 공급자가 돌려주는 데이터. years는 수록 연도 (그 밖의 해는 공휴일을 모른다). */
+export interface HolidayData {
+  years: number[];
+  holidays: Holiday[];
+}
+
+/** 오늘 재생하지 않는 이유 (FR-10~13). */
+export type OffDayReason =
+  | { kind: 'weekend' }
+  | { kind: 'holiday'; name: string }
+  | { kind: 'off-day' }
+  | { kind: 'skip-today' };
+
+/** 다음 재생 일정. daysFromToday: 0 = 오늘, 1 = 내일 … */
+export interface NextPlay {
+  slot: ScheduleSlot;
+  dateKey: string;
+  daysFromToday: number;
+}
+
 /** 메인 → 화면 상태 알림 (status:update). */
 export interface PlayerStatus {
   mode: PlayMode;
-  /** 지금 시각이 속한 구간 (재생하지 않아도 표시용으로 채운다). */
+  /** 오늘 재생하지 않는 이유. 재생하는 날이면 null. */
+  offDayReason: OffDayReason | null;
+  /** "오늘은 재생 안 함"이 켜져 있는지 (토글 버튼 표시용). */
+  isSkippingToday: boolean;
+  /** 지금 시각이 속한 구간. 쉬는 날이면 null. */
   activeSlot: ScheduleSlot | null;
-  nextSlot: { slot: ScheduleSlot; isTomorrow: boolean } | null;
+  nextPlay: NextPlay | null;
   currentTrackId: string | null;
   /** 다음에 나올 곡 (노래 목록의 "다음 곡" 표시). */
   nextTrackId: string | null;
@@ -101,6 +131,12 @@ export interface RendererApi {
   notifyError: (trackId: string) => void;
   getStatus: () => Promise<PlayerStatus>;
   onStatus: (listener: (status: PlayerStatus) => void) => () => void;
+
+  /** "오늘은 재생 안 함" 켜기/끄기. 켜면 재생 중인 음악도 멈춘다. */
+  setSkipToday: (isSkipping: boolean) => void;
+  /** 평일 하루를 쉬는 날로 지정/해제한다. 바뀐 쉬는 날 목록을 돌려준다. */
+  toggleOffDay: (dateKey: string) => Promise<string[]>;
+  getHolidays: () => Promise<HolidayData>;
 
   getSettings: () => Promise<AppSettings>;
   saveSchedule: (schedule: ScheduleSlot[]) => Promise<SaveScheduleResult>;

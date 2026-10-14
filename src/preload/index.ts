@@ -5,6 +5,7 @@ import { IPC } from '../shared/ipc-channels';
 import type {
   AddFilesResult,
   AppSettings,
+  HolidayData,
   LibraryTrack,
   PlayerStatus,
   RendererApi,
@@ -38,6 +39,11 @@ const api: RendererApi = {
   notifyError: (trackId) => ipcRenderer.send(IPC.PLAYER_ERROR, trackId),
   getStatus: () => ipcRenderer.invoke(IPC.STATUS_GET) as Promise<PlayerStatus>,
   onStatus: (listener) => subscribe<PlayerStatus>(IPC.STATUS_UPDATE, listener),
+
+  setSkipToday: (isSkipping) => ipcRenderer.send(IPC.DAY_SKIP_TODAY, isSkipping),
+  toggleOffDay: (dateKey) =>
+    ipcRenderer.invoke(IPC.DAY_TOGGLE_OFF_DAY, dateKey) as Promise<string[]>,
+  getHolidays: () => ipcRenderer.invoke(IPC.DAY_HOLIDAYS) as Promise<HolidayData>,
 
   getSettings: () => ipcRenderer.invoke(IPC.SETTINGS_GET) as Promise<AppSettings>,
   saveSchedule: (schedule) =>

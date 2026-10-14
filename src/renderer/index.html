@@ -25,6 +25,12 @@
           </div>
           <p id="status" class="status" aria-live="polite"></p>
           <p id="now-playing" class="now-playing"></p>
+          <button
+            id="skip-today-button"
+            class="skip-today"
+            type="button"
+            aria-pressed="false"
+          ></button>
         </section>
 
         <section class="schedule">
@@ -35,6 +41,17 @@
             <span id="schedule-message" aria-live="polite"></span>
             <button id="save-schedule-button" type="button"></button>
           </div>
+        </section>
+
+        <section class="off-days">
+          <h2 id="off-day-title"></h2>
+          <p id="off-day-hint" class="hint"></p>
+          <div class="calendar-header">
+            <button id="calendar-prev" type="button"></button>
+            <span id="calendar-month"></span>
+            <button id="calendar-next" type="button"></button>
+          </div>
+          <div id="calendar-grid" class="calendar-grid"></div>
         </section>
       </div>
 

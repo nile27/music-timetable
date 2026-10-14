@@ -1,6 +1,7 @@
 import './style.css';
 import type { PlayerStatus } from '../shared/types';
 import { setupLibraryView } from './library-view';
+import { setupOffDayCalendar } from './off-day-calendar';
 import { MESSAGES } from './messages';
 import { AudioPlayer } from './player';
 import { setupScheduleEditor } from './schedule-editor';
@@ -19,9 +20,8 @@ function describeStatus(status: PlayerStatus): string {
   if (status.mode === 'manual') return MESSAGES.statusManual;
   if (status.isMissingTracks) return MESSAGES.statusNoTracks;
 
-  const next = status.nextSlot
-    ? MESSAGES.statusNext(status.nextSlot.slot, status.nextSlot.isTomorrow)
-    : MESSAGES.statusNoSchedule;
+  const next = status.nextPlay ? MESSAGES.statusNext(status.nextPlay) : MESSAGES.statusNoSchedule;
+  if (status.offDayReason) return `${MESSAGES.statusOffDay(status.offDayReason)}\n${next}`;
   return status.activeSlot ? `${MESSAGES.statusStoppedInSlot(status.activeSlot)}\n${next}` : next;
 }
 
@@ -32,6 +32,7 @@ function init(): void {
   const nowPlaying = getElement('now-playing');
   const volumeLabel = getElement('volume-label');
   const volumeSlider = getElement<HTMLInputElement>('volume-slider');
+  const skipTodayButton = getElement<HTMLButtonElement>('skip-today-button');
 
   document.title = MESSAGES.appTitle;
   playButton.textContent = MESSAGES.play;
@@ -75,9 +76,16 @@ function init(): void {
     empty: getElement('empty-library'),
   });
 
+  // "오늘은 재생 안 함" 토글 (FR-13). 상태는 메인 상태 알림을 따른다 (다음 날 자동 해제도 그대로 반영).
+  let isSkippingToday = false;
+  skipTodayButton.addEventListener('click', () => window.api.setSkipToday(!isSkippingToday));
+
   const renderStatus = (status: PlayerStatus): void => {
     statusText.textContent = describeStatus(status);
     library.setNextTrackId(status.nextTrackId);
+    isSkippingToday = status.isSkippingToday;
+    skipTodayButton.textContent = isSkippingToday ? MESSAGES.unskipToday : MESSAGES.skipToday;
+    skipTodayButton.setAttribute('aria-pressed', String(isSkippingToday));
   };
   void window.api.getStatus().then(renderStatus);
   window.api.onStatus(renderStatus);
@@ -88,6 +96,15 @@ function init(): void {
     addButton: getElement<HTMLButtonElement>('add-slot-button'),
     saveButton: getElement<HTMLButtonElement>('save-schedule-button'),
     message: getElement('schedule-message'),
+  });
+
+  setupOffDayCalendar({
+    title: getElement('off-day-title'),
+    hint: getElement('off-day-hint'),
+    monthLabel: getElement('calendar-month'),
+    previousButton: getElement<HTMLButtonElement>('calendar-prev'),
+    nextButton: getElement<HTMLButtonElement>('calendar-next'),
+    grid: getElement('calendar-grid'),
   });
 }
 
