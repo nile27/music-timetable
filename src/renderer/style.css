@@ -1,0 +1,41 @@
+/* 1단계 확인용 최소 스타일. 실제 디자인은 6단계에서 Figma 기준으로 교체한다. */
+:root {
+  font-family: 'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  color: #1f2328;
+  background: #f6f7f9;
+}
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+.controls {
+  display: flex;
+  gap: 12px;
+}
+
+button {
+  min-width: 96px;
+  padding: 10px 20px;
+  font: inherit;
+  font-size: 16px;
+  border: 1px solid #c9ccd1;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #eef0f3;
+}
+
+#status {
+  margin: 0;
+  font-size: 15px;
+}

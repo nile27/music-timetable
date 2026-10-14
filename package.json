@@ -1,0 +1,34 @@
+{
+  "name": "music-timetable",
+  "version": "0.1.0",
+  "private": true,
+  "description": "교육장 등교·점심·하교 시간에 로컬 음악을 자동 재생/정지하는 앱",
+  "main": "./out/main/index.js",
+  "author": "music-timetable",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run typecheck && electron-vite build",
+    "build:win": "npm run build && electron-builder --win",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "lint": "eslint --cache .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "postinstall": "install-electron && electron-builder install-app-deps"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "^3.0.0",
+    "@electron-toolkit/eslint-config-ts": "^3.1.0",
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@types/node": "^22.19.1",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.1",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
+    "vitest": "^5.0.4"
+  }
+}

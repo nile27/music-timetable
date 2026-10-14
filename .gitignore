@@ -1,0 +1,9 @@
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+# 테스트용 음원은 용량이 커서 저장소에 넣지 않는다
+music/*.mp3
