@@ -53,11 +53,21 @@ function createTrackItem(track: LibraryTrack, index: number): HTMLLIElement {
     text.append(artist);
   }
 
-  item.append(number, cover, text);
+  const nextMark = document.createElement('span');
+  nextMark.className = 'next-mark';
+  nextMark.textContent = MESSAGES.nextTrack;
+
+  item.dataset.trackId = track.id;
+  item.append(number, cover, text, nextMark);
   return item;
 }
 
-export function setupLibraryView(elements: LibraryViewElements): void {
+export interface LibraryView {
+  /** 다음에 나올 곡 표시 (메인 상태 알림으로 갱신). */
+  setNextTrackId: (trackId: string | null) => void;
+}
+
+export function setupLibraryView(elements: LibraryViewElements): LibraryView {
   const { dropZone, dropMessage, count, openFolderButton, list, empty } = elements;
 
   dropMessage.textContent = MESSAGES.dropHint;
@@ -65,10 +75,20 @@ export function setupLibraryView(elements: LibraryViewElements): void {
   empty.textContent = MESSAGES.emptyLibrary;
   openFolderButton.addEventListener('click', () => window.api.openMusicFolder());
 
+  let nextTrackId: string | null = null;
+  const markNextTrack = (): void => {
+    for (const item of list.children) {
+      if (item instanceof HTMLElement) {
+        item.classList.toggle('is-next', item.dataset.trackId === nextTrackId);
+      }
+    }
+  };
+
   const render = (tracks: readonly LibraryTrack[]): void => {
     count.textContent = MESSAGES.trackCount(tracks.length);
     empty.hidden = tracks.length > 0;
     list.replaceChildren(...tracks.map(createTrackItem));
+    markNextTrack();
   };
 
   void window.api.listTracks().then(render);
@@ -105,4 +125,11 @@ export function setupLibraryView(elements: LibraryViewElements): void {
         dropMessage.textContent = MESSAGES.addFailed(files.map((file) => file.name));
       });
   });
+
+  return {
+    setNextTrackId: (trackId) => {
+      nextTrackId = trackId;
+      markNextTrack();
+    },
+  };
 }

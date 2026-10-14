@@ -12,21 +12,124 @@
 body {
   margin: 0;
   height: 100vh;
+  padding: 16px 20px;
+}
+
+.layout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.column {
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 20px 24px;
 }
 
 .player {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .controls {
   display: flex;
+  align-items: center;
   gap: 12px;
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.status {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: pre-line;
+}
+
+.now-playing {
+  margin: 0;
+  min-height: 1.4em;
+  color: #4b5563;
+}
+
+.schedule h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.schedule-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: 1fr 110px 110px 64px;
+  grid-template-areas: 'name start end remove' 'error error error error';
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.slot-row > :nth-child(1) {
+  grid-area: name;
+}
+
+.slot-header {
+  grid-template-areas: 'name start end remove';
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.slot-row input {
+  min-width: 0;
+  padding: 6px 8px;
+  font: inherit;
+  border: 1px solid #c9ccd1;
+  border-radius: 6px;
+}
+
+.slot-row button {
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.slot-row.has-error input {
+  border-color: #dc2626;
+}
+
+.slot-error {
+  grid-area: error;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.slot-error:empty {
+  display: none;
+}
+
+.schedule-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+#schedule-message {
+  flex: 1;
+  font-size: 14px;
+  color: #4b5563;
 }
 
 button {
@@ -44,16 +147,7 @@ button:hover {
   background: #eef0f3;
 }
 
-#status {
-  margin: 0;
-  font-size: 15px;
-}
-
 .library {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
   gap: 12px;
 }
 
@@ -149,4 +243,16 @@ button:hover {
 .track-artist {
   font-size: 13px;
   color: #6b7280;
+}
+
+.next-mark {
+  display: none;
+  margin-left: auto;
+  flex: none;
+  font-size: 13px;
+  color: #2563eb;
+}
+
+.track.is-next .next-mark {
+  display: inline;
 }

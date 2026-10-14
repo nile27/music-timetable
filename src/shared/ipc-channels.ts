@@ -9,6 +9,22 @@ export const IPC = {
   PLAYER_PLAY: 'player:play',
   /** 메인 → 화면: 즉시 정지하라. */
   PLAYER_STOP: 'player:stop',
+  /** 화면 → 메인: 곡이 끝났다 (트랙 id). 메인이 다음 곡을 지시한다. */
+  PLAYER_ENDED: 'player:ended',
+  /** 화면 → 메인: 재생 실패 (트랙 id). 메인이 다음 곡으로 넘긴다. */
+  PLAYER_ERROR: 'player:error',
+
+  /** 메인 → 화면: 재생 상태·다음 재생 일정 (PlayerStatus). */
+  STATUS_UPDATE: 'status:update',
+  /** 화면 → 메인 (invoke): 현재 상태 요청 (화면을 처음 열 때). */
+  STATUS_GET: 'status:get',
+
+  /** 화면 → 메인 (invoke): 설정 요청 → AppSettings */
+  SETTINGS_GET: 'settings:get',
+  /** 화면 → 메인 (invoke): 시간표 저장 → SaveScheduleResult */
+  SETTINGS_SAVE: 'settings:save',
+  /** 화면 → 메인: 볼륨 변경 (0~1). 바꾸는 즉시 저장한다. */
+  SETTINGS_SET_VOLUME: 'settings:setVolume',
 
   /** 화면 → 메인 (invoke): 곡 목록 요청 → LibraryTrack[] */
   LIBRARY_LIST: 'library:list',

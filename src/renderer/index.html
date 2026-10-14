@@ -12,25 +12,44 @@
 
   <body>
     <!-- 문구는 messages.ts에서 채운다 -->
-    <section class="player">
-      <div class="controls">
-        <button id="play-button" type="button"></button>
-        <button id="stop-button" type="button"></button>
-      </div>
-      <p id="status" aria-live="polite"></p>
-    </section>
+    <div class="layout">
+      <div class="column">
+        <section class="player">
+          <div class="controls">
+            <button id="play-button" type="button"></button>
+            <button id="stop-button" type="button"></button>
+            <label class="volume">
+              <span id="volume-label"></span>
+              <input id="volume-slider" type="range" min="0" max="100" step="1" />
+            </label>
+          </div>
+          <p id="status" class="status" aria-live="polite"></p>
+          <p id="now-playing" class="now-playing"></p>
+        </section>
 
-    <section class="library">
-      <div id="drop-zone" class="drop-zone">
-        <p id="drop-message" aria-live="polite"></p>
+        <section class="schedule">
+          <h2 id="schedule-title"></h2>
+          <div id="schedule-rows" class="schedule-rows"></div>
+          <div class="schedule-actions">
+            <button id="add-slot-button" type="button"></button>
+            <span id="schedule-message" aria-live="polite"></span>
+            <button id="save-schedule-button" type="button"></button>
+          </div>
+        </section>
       </div>
-      <div class="library-header">
-        <span id="track-count"></span>
-        <button id="open-folder-button" type="button"></button>
-      </div>
-      <p id="empty-library" class="empty" hidden></p>
-      <ul id="track-list" class="track-list"></ul>
-    </section>
+
+      <section class="library column">
+        <div id="drop-zone" class="drop-zone">
+          <p id="drop-message" aria-live="polite"></p>
+        </div>
+        <div class="library-header">
+          <span id="track-count"></span>
+          <button id="open-folder-button" type="button"></button>
+        </div>
+        <p id="empty-library" class="empty" hidden></p>
+        <ul id="track-list" class="track-list"></ul>
+      </section>
+    </div>
 
     <script type="module" src="./renderer.ts"></script>
   </body>
