@@ -11,7 +11,7 @@ describe('내장 holidays.json', () => {
   });
 
   it('2026·2027년을 수록한다', async () => {
-    const data = await bundledHolidayProvider();
+    const { data } = await bundledHolidayProvider();
     expect(data.years).toEqual([2026, 2027]);
     for (const year of data.years) {
       expect(data.holidays.some((holiday) => holiday.date.startsWith(`${year}-`))).toBe(true);
@@ -19,7 +19,7 @@ describe('내장 holidays.json', () => {
   });
 
   it('대체공휴일은 모두 평일이다 (주말이면 대체할 이유가 없음)', async () => {
-    const data = await bundledHolidayProvider();
+    const { data } = await bundledHolidayProvider();
     const substitutes = data.holidays.filter((holiday) => holiday.name.startsWith('대체공휴일'));
     expect(substitutes.length).toBeGreaterThan(0);
     for (const holiday of substitutes) {
@@ -29,7 +29,7 @@ describe('내장 holidays.json', () => {
   });
 
   it('주요 날짜 확인', async () => {
-    const map = toHolidayMap(await bundledHolidayProvider());
+    const map = toHolidayMap((await bundledHolidayProvider()).data);
     expect(map.get('2026-03-02')).toBe('대체공휴일(삼일절)');
     expect(map.get('2026-06-03')).toBe('전국동시지방선거');
     expect(map.get('2026-10-09')).toBe('한글날');

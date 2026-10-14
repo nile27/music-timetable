@@ -23,6 +23,7 @@ import {
   type SchedulerState,
   type SlotKey,
 } from './scheduler-rules';
+import { logger } from './logger';
 
 const TICK_INTERVAL_MS = 1000;
 
@@ -69,7 +70,11 @@ export class Scheduler {
 
   /** 매초 판정. 설정·곡 목록이 바뀌어도 다음 판정에서 자연히 반영된다. */
   tick(): void {
-    this.apply(decideTick(this.state, this.getActiveSlotKey(), this.deps.getTracks().length > 0));
+    // 판정이 정지를 내리는 경우는 구간 종료이거나, 구간 중에 쉬는 날이 된 경우다.
+    this.apply(
+      decideTick(this.state, this.getActiveSlotKey(), this.deps.getTracks().length > 0),
+      '구간 종료 또는 쉬는 날',
+    );
   }
 
   requestPlay(): void {
@@ -79,7 +84,7 @@ export class Scheduler {
   }
 
   requestStop(): void {
-    this.apply(decideStop(this.state, this.getActiveSlotKey()));
+    this.apply(decideStop(this.state, this.getActiveSlotKey()), '정지 버튼');
   }
 
   /**
@@ -88,7 +93,7 @@ export class Scheduler {
    */
   handleSkipTodayChanged(isSkipping: boolean): void {
     if (isSkipping) {
-      this.apply(decideStop(this.state, null));
+      this.apply(decideStop(this.state, null), '오늘은 재생 안 함');
     } else {
       this.tick();
     }
@@ -104,14 +109,18 @@ export class Scheduler {
   /** 재생 실패(파일 없음·손상) → 다음 곡. 모든 곡이 실패하면 이번 구간은 포기한다. */
   handleError(trackId: unknown): void {
     if (this.state.mode === 'idle' || trackId !== this.currentTrackId) return;
-    console.warn(`[scheduler] 재생 실패, 다음 곡으로 넘깁니다: ${String(trackId)}`);
+    logger.warn(`[scheduler] 재생 실패, 다음 곡으로 넘깁니다: ${String(trackId)}`);
     this.consecutiveFailures++;
     if (this.consecutiveFailures >= this.deps.getTracks().length) {
-      console.warn('[scheduler] 모든 곡이 재생에 실패해서 이번 구간은 정지합니다');
-      this.apply(decideStop(this.state, this.getActiveSlotKey()));
+      this.apply(decideStop(this.state, this.getActiveSlotKey()), '모든 곡 재생 실패');
       return;
     }
     this.playNext();
+  }
+
+  /** 새벽 재시작 판단용: 지금 소리를 내고 있는지. */
+  isIdle(): boolean {
+    return this.state.mode === 'idle';
   }
 
   getStatus(): PlayerStatus {
@@ -163,16 +172,18 @@ export class Scheduler {
     if (key === this.lastSkipLogKey) return;
     this.lastSkipLogKey = key;
     const detail = reason.kind === 'holiday' ? `holiday:${reason.name}` : reason.kind;
-    console.info(`[scheduler] 휴무일이라 건너뜀: ${dateKey} ${slot.name} (${detail})`);
+    logger.info(`[scheduler] 휴무일이라 건너뜀: ${dateKey} ${slot.name} (${detail})`);
   }
 
-  private apply(decision: Decision): void {
+  /** 판정 결과를 실행한다. stopReason은 정지할 때 로그에 남길 이유. */
+  private apply(decision: Decision, stopReason = ''): void {
     this.state = decision.state;
     if (decision.action === 'start') {
       this.consecutiveFailures = 0;
       this.playNext();
     } else if (decision.action === 'stop') {
       this.currentTrackId = null;
+      logger.info(`[scheduler] 정지 (${stopReason})`);
       this.deps.stop();
     }
     this.publishStatusIfChanged();
@@ -185,14 +196,16 @@ export class Scheduler {
   private playNext(): void {
     const tracks = this.deps.getTracks();
     if (tracks.length === 0) {
-      this.apply(decideStop(this.state, this.getActiveSlotKey()));
+      this.apply(decideStop(this.state, this.getActiveSlotKey()), '재생할 곡 없음');
       return;
     }
     const index = normalizeIndex(this.deps.getSettings().nextIndex, tracks.length);
     const track = tracks[index];
     this.currentTrackId = track.id;
     this.deps.saveNextIndex(getNextIndex(index, tracks.length));
-    console.info(`[scheduler] 재생: ${track.id} (${this.state.mode})`);
+    const slotName = findActiveSlot(this.deps.getSettings().schedule, this.now())?.name;
+    const where = this.state.mode === 'manual' ? '직접 재생' : (slotName ?? '구간');
+    logger.info(`[scheduler] 재생 시작: ${track.id} (${where})`);
     this.deps.play({ id: track.id, title: track.title, url: track.url });
     this.publishStatusIfChanged();
   }

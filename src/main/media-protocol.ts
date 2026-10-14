@@ -15,6 +15,7 @@ import {
   resolveAllowedPath,
 } from './media-request';
 import { readEmbeddedCover } from './track-tags';
+import { logger } from './logger';
 
 let allowedRoots: Record<MediaKind, string[]> = { audio: [], cover: [], 'default-cover': [] };
 
@@ -64,7 +65,7 @@ async function resolveRequestedFile(
 
   const allowed = resolveAllowedPath(filePath, allowedRoots[kind], path);
   if (!allowed) {
-    console.warn(`[media] 허용 폴더 밖 요청 거부 (${kind}): ${requested}`);
+    logger.warn(`[media] 허용 폴더 밖 요청 거부 (${kind}): ${requested}`);
     return new Response(null, { status: 403 });
   }
 
@@ -122,7 +123,7 @@ export function handleMediaProtocol(): void {
         if (!cover) return new Response(null, { status: 404 });
         return new Response(cover.data, { headers: { 'Content-Type': cover.mimeType } });
       } catch (error) {
-        console.warn(`[media] 내장 커버를 읽지 못했습니다: ${filePath}`, error);
+        logger.warn(`[media] 내장 커버를 읽지 못했습니다: ${filePath}`, error);
         return new Response(null, { status: 404 });
       }
     }

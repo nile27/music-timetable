@@ -1,143 +1,20 @@
+// 앱 시작·종료. 각 기능은 모듈에 있고 여기서는 순서대로 연결만 한다.
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain, shell } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { IPC } from '../shared/ipc-channels';
-import { isWeekend, parseDateKey } from '../shared/day-rules';
-import { normalizeSchedule, validateSchedule } from '../shared/schedule';
-import { toDateKey } from '../shared/time';
-import type { HolidayData, SaveScheduleResult, ScheduleSlot } from '../shared/types';
 import { getDefaultCoverDir, getMusicDir } from './app-paths';
 import { bundledHolidayProvider, toHolidayMap } from './holiday-provider';
+import { registerIpcHandlers } from './ipc';
 import { MusicLibrary } from './library';
+import { logger } from './logger';
 import { handleMediaProtocol, registerMediaScheme, setMediaRoots } from './media-protocol';
 import { Scheduler } from './scheduler';
 import { SettingsStore } from './settings';
-import { parseVolume } from './settings-rules';
+import { applyAutoLaunch, isLaunchedAtLogin, startRestartWatcher } from './system';
+import { createMainWindow, revealWindow } from './window';
 
 // electron-builder.yml의 appId와 같아야 Windows 작업 표시줄·알림에서 같은 앱으로 묶인다.
 const APP_USER_MODEL_ID = 'com.music-timetable.app';
-const WINDOW_WIDTH = 960;
-const WINDOW_HEIGHT = 640;
-
-function createWindow(): BrowserWindow {
-  const window = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
-    show: false,
-    autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
-      // 보안 기본값을 명시해 둔다. 바꾸지 말 것 (CLAUDE.md 금지 사항).
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      // 등교 시간에는 아무도 클릭하지 않으므로 사용자 조작 없이도 소리가 나야 한다.
-      autoplayPolicy: 'no-user-gesture-required',
-    },
-  });
-
-  window.on('ready-to-show', () => window.show());
-
-  // 오프라인 앱이라 새 창·외부 페이지 이동은 모두 막는다.
-  // 파일을 창 밖 엉뚱한 곳에 떨어뜨려도 그 파일로 이동하지 않게 하는 역할도 한다.
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  window.webContents.on('will-navigate', (event) => event.preventDefault());
-
-  const devServerUrl = process.env['ELECTRON_RENDERER_URL'];
-  if (!app.isPackaged && devServerUrl) {
-    void window.loadURL(devServerUrl);
-  } else {
-    void window.loadFile(path.join(__dirname, '../renderer/index.html'));
-  }
-  return window;
-}
-
-/** 화면에서 온 값은 믿지 않는다: 문자열 배열인지 확인한다. */
-function toPathList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
-}
-
-interface AppServices {
-  library: MusicLibrary;
-  settings: SettingsStore;
-  scheduler: Scheduler;
-  holidayData: HolidayData;
-  musicDir: string;
-}
-
-function registerIpcHandlers(services: AppServices): void {
-  const { library, settings, scheduler, holidayData, musicDir } = services;
-  const holidayMap = toHolidayMap(holidayData);
-  // 무엇을 틀지는 메인(스케줄러)이 정한다 (판단은 main, 소리는 renderer).
-  ipcMain.on(IPC.PLAYER_REQUEST_PLAY, () => scheduler.requestPlay());
-  ipcMain.on(IPC.PLAYER_REQUEST_STOP, () => scheduler.requestStop());
-  ipcMain.on(IPC.PLAYER_ENDED, (_event, trackId: unknown) => scheduler.handleEnded(trackId));
-  ipcMain.on(IPC.PLAYER_ERROR, (_event, trackId: unknown) => scheduler.handleError(trackId));
-  ipcMain.handle(IPC.STATUS_GET, () => scheduler.getStatus());
-
-  ipcMain.handle(IPC.SETTINGS_GET, () => settings.get());
-  ipcMain.handle(IPC.SETTINGS_SAVE, async (_event, value: unknown): Promise<SaveScheduleResult> => {
-    // 화면에서도 검사하지만 메인이 다시 검사한다 (화면에서 온 값은 믿지 않는다).
-    const schedule = Array.isArray(value) ? parseScheduleInput(value) : null;
-    if (!schedule) return { ok: false, issues: [] };
-    const issues = validateSchedule(schedule);
-    if (issues.length > 0) return { ok: false, issues };
-    await settings.save({ schedule: normalizeSchedule(schedule) });
-    console.info('[settings] 시간표 저장', JSON.stringify(settings.get().schedule));
-    // 바뀐 시간표로 바로 판정해 화면 상태를 갱신한다 (다음 1초를 기다리지 않음).
-    scheduler.tick();
-    return { ok: true, settings: settings.get() };
-  });
-  ipcMain.on(IPC.SETTINGS_SET_VOLUME, (_event, value: unknown) => {
-    const volume = parseVolume(value);
-    if (volume !== null) void settings.save({ volume });
-  });
-
-  ipcMain.on(IPC.DAY_SKIP_TODAY, (_event, value: unknown) => {
-    if (typeof value !== 'boolean') return;
-    // 오늘 날짜를 저장해 두면 날짜가 바뀌는 순간 판정에서 빠지므로 "다음 날 자동 해제"가 된다.
-    void settings.save({ skipDate: value ? toDateKey(new Date()) : null });
-    console.info(`[day] 오늘은 재생 안 함: ${value ? '켜짐' : '꺼짐'}`);
-    scheduler.handleSkipTodayChanged(value);
-  });
-  ipcMain.handle(IPC.DAY_TOGGLE_OFF_DAY, async (_event, value: unknown): Promise<string[]> => {
-    const { offDays } = settings.get();
-    // 주말·공휴일은 원래 쉬므로 지정 대상이 아니다 (달력에서도 누를 수 없게 막지만 다시 검사).
-    const date = typeof value === 'string' ? parseDateKey(value) : null;
-    if (!date || isWeekend(date) || holidayMap.has(value as string)) return offDays;
-    const dateKey = value as string;
-    const next = offDays.includes(dateKey)
-      ? offDays.filter((day) => day !== dateKey)
-      : [...offDays, dateKey].sort();
-    await settings.save({ offDays: next });
-    console.info(`[day] 쉬는 날 ${offDays.includes(dateKey) ? '해제' : '지정'}: ${dateKey}`);
-    scheduler.tick();
-    return next;
-  });
-  ipcMain.handle(IPC.DAY_HOLIDAYS, () => holidayData);
-
-  ipcMain.handle(IPC.LIBRARY_LIST, () => library.getTracks());
-  ipcMain.handle(IPC.LIBRARY_ADD, (_event, paths: unknown) => library.addFiles(toPathList(paths)));
-  ipcMain.on(IPC.LIBRARY_OPEN_FOLDER, () => {
-    void shell.openPath(musicDir).then((error) => {
-      if (error) console.warn(`[library] 폴더를 열지 못했습니다: ${error}`);
-    });
-  });
-}
-
-/** 화면에서 온 시간표 배열을 ScheduleSlot[]로. 항목 형식이 틀리면 null. */
-function parseScheduleInput(value: unknown[]): ScheduleSlot[] | null {
-  const slots: ScheduleSlot[] = [];
-  for (const item of value) {
-    if (typeof item !== 'object' || item === null) return null;
-    const { name, start, end } = item as Record<string, unknown>;
-    if (typeof name !== 'string' || typeof start !== 'string' || typeof end !== 'string') {
-      return null;
-    }
-    slots.push({ name, start, end });
-  }
-  return slots;
-}
 
 function sendToWindows(channel: string, payload?: unknown): void {
   for (const window of BrowserWindow.getAllWindows()) {
@@ -145,9 +22,13 @@ function sendToWindows(channel: string, payload?: unknown): void {
   }
 }
 
-registerMediaScheme();
+// 예상 못 한 오류도 로그에 남겨야 무인 운영 중 멈춘 원인을 찾을 수 있다.
+process.on('uncaughtException', (error) => logger.error('[app] 처리되지 않은 예외', error));
+process.on('unhandledRejection', (reason) =>
+  logger.error('[app] 처리되지 않은 Promise 거부', reason),
+);
 
-void app.whenReady().then(async () => {
+async function startApp(): Promise<void> {
   if (process.platform === 'win32') {
     // 개발 실행은 electron.exe라서 실행 파일 경로를 ID로 써야 알림 등이 동작한다.
     app.setAppUserModelId(app.isPackaged ? APP_USER_MODEL_ID : process.execPath);
@@ -155,12 +36,15 @@ void app.whenReady().then(async () => {
 
   const musicDir = getMusicDir();
   const defaultCoverDir = getDefaultCoverDir();
-  // "내 음악"이 OneDrive 등으로 옮겨진 PC가 있어 실제 위치를 남긴다. (5단계에서 electron-log로 옮김)
-  console.info(`[app] 음악 폴더: ${musicDir}`);
-  console.info(`[app] 기본 커버 폴더: ${defaultCoverDir}`);
+  logger.info(`[app] 시작 v${app.getVersion()}${isLaunchedAtLogin() ? ' (자동 실행)' : ''}`);
+  // "내 음악"이 OneDrive 등으로 옮겨진 PC가 있어 실제 위치를 남긴다.
+  logger.info(`[app] 음악 폴더: ${musicDir}`);
+  logger.info(`[app] 기본 커버 폴더: ${defaultCoverDir}`);
+  logger.info(`[app] 로그 파일: ${logger.getFilePath()}`);
 
   const settings = new SettingsStore(path.join(app.getPath('userData'), 'settings.json'));
   await settings.load();
+  applyAutoLaunch(settings.get().autoLaunch);
 
   const library = new MusicLibrary(musicDir, defaultCoverDir, (tracks) =>
     sendToWindows(IPC.LIBRARY_CHANGED, tracks),
@@ -170,15 +54,17 @@ void app.whenReady().then(async () => {
   await setMediaRoots({ music: [musicDir], defaultCovers: [defaultCoverDir] });
   handleMediaProtocol();
 
-  const holidayData = await bundledHolidayProvider();
-  const holidayMap = toHolidayMap(holidayData);
-  console.info(
+  const { data: holidayData, droppedCount } = await bundledHolidayProvider();
+  if (droppedCount > 0)
+    logger.warn(`[holiday] 형식이 틀린 공휴일 ${droppedCount}개를 제외했습니다`);
+  logger.info(
     `[holiday] 공휴일 ${holidayData.holidays.length}개, 수록 연도: ${holidayData.years.join(', ')}`,
   );
   if (!holidayData.years.includes(new Date().getFullYear())) {
     // 수록 연도가 지나면 공휴일에도 재생된다. 앱 업데이트가 필요하다는 신호.
-    console.warn('[holiday] 올해 공휴일 정보가 없습니다. 앱 업데이트가 필요합니다');
+    logger.warn('[holiday] 올해 공휴일 정보가 없습니다. 앱 업데이트가 필요합니다');
   }
+  const holidayMap = toHolidayMap(holidayData);
 
   const scheduler = new Scheduler({
     getTracks: () => library.getTracks(),
@@ -191,18 +77,56 @@ void app.whenReady().then(async () => {
   });
   registerIpcHandlers({ library, settings, scheduler, holidayData, musicDir });
 
-  const window = createWindow();
+  const window = createMainWindow({ startMinimized: isLaunchedAtLogin() });
   // 화면이 다 뜬 뒤에 판정을 시작해야 재생 지시가 허공으로 사라지지 않는다.
-  // 화면이 다시 로드되면(개발 중 새로고침 등) 소리가 끊기므로 상태를 맞추고 다시 판정한다.
+  // 화면이 다시 로드되면(새로고침·화면 프로세스 재시작) 소리가 끊기므로 상태를 맞추고 다시 판정한다.
   window.webContents.on('did-finish-load', () => scheduler.resync());
 
-  app.on('will-quit', () => {
+  // 이미 실행 중인데 아이콘을 또 누르면 새로 켜지 않고 기존 창을 앞으로 (음악이 두 번 나오지 않게).
+  app.on('second-instance', () => {
+    logger.info('[app] 중복 실행 시도 → 기존 창 표시');
+    if (!window.isDestroyed()) revealWindow(window);
+  });
+
+  const stopRestartWatcher = startRestartWatcher({
+    getSchedule: () => settings.get().schedule,
+    isIdle: () => scheduler.isIdle(),
+    beforeRestart: async () => {
+      scheduler.stop();
+      library.stop();
+      await settings.flush();
+    },
+  });
+
+  // X → 창이 닫히면(window-all-closed) 종료 → 여기서 정리. 재생 위치는 곡 시작 때 이미 저장되어 있고,
+  // 아직 쓰는 중인 설정이 있으면 끝날 때까지 기다렸다가 종료한다 (FR-34).
+  let isCleanedUp = false;
+  app.on('before-quit', (event) => {
+    if (isCleanedUp) return;
+    event.preventDefault();
+    stopRestartWatcher();
     scheduler.stop();
     library.stop();
+    void settings.flush().finally(() => {
+      isCleanedUp = true;
+      logger.info('[app] 종료');
+      app.quit();
+    });
   });
-});
+}
 
-// X를 누르면 바로 종료한다 (트레이·종료 확인 없음). macOS도 개발 확인을 위해 같게 맞춘다.
-app.on('window-all-closed', () => {
+// 중복 실행 방지: 두 번째 실행은 첫 번째에 알리고(second-instance) 바로 끝낸다.
+if (!app.requestSingleInstanceLock()) {
   app.quit();
-});
+} else {
+  registerMediaScheme();
+  void app
+    .whenReady()
+    .then(startApp)
+    .catch((error: unknown) => {
+      logger.error('[app] 시작 실패', error);
+    });
+
+  // X를 누르면 바로 종료한다 (트레이·종료 확인 없음). macOS도 개발 확인을 위해 같게 맞춘다.
+  app.on('window-all-closed', () => app.quit());
+}

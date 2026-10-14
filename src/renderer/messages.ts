@@ -84,6 +84,10 @@ export const MESSAGES = {
   weekdays: WEEKDAYS,
   offDayMark: '쉬는 날',
 
+  // 설정 (S-04)
+  settingsTitle: '설정',
+  autoLaunch: 'PC 켜질 때 자동 실행',
+
   // 노래 화면 (S-03)
   dropHint: '여기에 음악 파일을 끌어다 놓으세요',
   trackCount: (count: number): string => `총 ${count}곡`,

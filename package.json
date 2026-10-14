@@ -32,6 +32,7 @@
     "vitest": "^5.0.4"
   },
   "dependencies": {
+    "electron-log": "^5.4.4",
     "music-metadata": "^12.2.0"
   }
 }

@@ -5,6 +5,7 @@ import { setupOffDayCalendar } from './off-day-calendar';
 import { MESSAGES } from './messages';
 import { AudioPlayer } from './player';
 import { setupScheduleEditor } from './schedule-editor';
+import { setupSettingsPanel } from './settings-panel';
 
 function getElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
@@ -105,6 +106,12 @@ function init(): void {
     previousButton: getElement<HTMLButtonElement>('calendar-prev'),
     nextButton: getElement<HTMLButtonElement>('calendar-next'),
     grid: getElement('calendar-grid'),
+  });
+
+  setupSettingsPanel({
+    title: getElement('settings-title'),
+    autoLaunchCheckbox: getElement<HTMLInputElement>('auto-launch-checkbox'),
+    autoLaunchLabel: getElement('auto-launch-label'),
   });
 }
 

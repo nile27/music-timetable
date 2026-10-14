@@ -13,6 +13,7 @@ import {
   toTrackInfo,
 } from './library-rules';
 import { readTrackTags, type TrackTags } from './track-tags';
+import { logger } from './logger';
 
 // 큰 파일을 복사하는 동안 변경 이벤트가 수십 번 오므로 잠잠해질 때까지 기다렸다가 한 번만 다시 읽는다.
 const RESCAN_DEBOUNCE_MS = 300;
@@ -86,7 +87,7 @@ export class MusicLibrary {
         if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
           result.duplicates.push(fileName);
         } else {
-          console.warn(`[library] 복사 실패: ${sourcePath}`, error);
+          logger.warn(`[library] 복사 실패: ${sourcePath}`, error);
           result.failed.push(fileName);
         }
       }
@@ -106,7 +107,7 @@ export class MusicLibrary {
       const names = await readdir(this.defaultCoverDir);
       return names.filter(isImageFileName);
     } catch {
-      console.warn(`[library] 기본 커버 폴더를 읽지 못했습니다: ${this.defaultCoverDir}`);
+      logger.warn(`[library] 기본 커버 폴더를 읽지 못했습니다: ${this.defaultCoverDir}`);
       return [];
     }
   }
@@ -127,7 +128,7 @@ export class MusicLibrary {
     }
     this.scanning = this.scanOnce()
       .catch((error: unknown) => {
-        console.warn('[library] 음악 폴더를 읽지 못했습니다', error);
+        logger.warn('[library] 음악 폴더를 읽지 못했습니다', error);
         // 폴더째 지워진 경우: 감시도 이미 죽었을 수 있으니 폴더를 다시 만들고 감시를 재시작한다.
         if ((error as NodeJS.ErrnoException).code === 'ENOENT') this.restartWatching();
       })
@@ -191,7 +192,7 @@ export class MusicLibrary {
     } catch (error) {
       // 깨진 파일이나 아직 복사 중인 파일. 파일 이름으로 보여주고, 복사가 끝나면
       // 수정 시각이 바뀌어 다시 읽힌다.
-      console.warn(`[library] 태그를 읽지 못했습니다: ${fileName}`, error);
+      logger.warn(`[library] 태그를 읽지 못했습니다: ${fileName}`, error);
       tags = { hasCover: false };
     }
     this.tagCache.set(fileName, { mtimeMs: info.mtimeMs, size: info.size, tags });
@@ -210,11 +211,11 @@ export class MusicLibrary {
     try {
       this.watcher = watch(this.musicDir, () => this.scheduleRescan());
       this.watcher.on('error', (error) => {
-        console.warn('[library] 폴더 감시가 끊겼습니다. 다시 시작합니다.', error);
+        logger.warn('[library] 폴더 감시가 끊겼습니다. 다시 시작합니다.', error);
         this.restartWatching();
       });
     } catch (error) {
-      console.warn('[library] 폴더 감시를 시작하지 못했습니다. 다시 시도합니다.', error);
+      logger.warn('[library] 폴더 감시를 시작하지 못했습니다. 다시 시도합니다.', error);
       this.restartWatching();
     }
   }
@@ -231,7 +232,7 @@ export class MusicLibrary {
           return this.rescan();
         })
         .catch((error: unknown) => {
-          console.warn('[library] 음악 폴더를 다시 만들지 못했습니다.', error);
+          logger.warn('[library] 음악 폴더를 다시 만들지 못했습니다.', error);
           this.restartWatching();
         });
     }, WATCH_RETRY_MS);

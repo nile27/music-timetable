@@ -3,6 +3,7 @@ import { readFile, rename, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { AppSettings } from '../shared/types';
 import { createDefaultSettings, parseSettings } from './settings-rules';
+import { logger } from './logger';
 
 export class SettingsStore {
   private settings: AppSettings = createDefaultSettings();
@@ -18,18 +19,18 @@ export class SettingsStore {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         // 처음 설치: 기본 시간표로 바로 동작하도록 기본값을 파일로 만들어 둔다 (FR-33).
-        console.info(`[settings] 설정 파일이 없어 기본값으로 만듭니다: ${this.filePath}`);
+        logger.info(`[settings] 설정 파일이 없어 기본값으로 만듭니다: ${this.filePath}`);
         await this.save({});
         return;
       }
-      console.warn('[settings] 설정 파일이 깨져서 기본값으로 시작합니다', error);
+      logger.warn('[settings] 설정 파일이 깨져서 기본값으로 시작합니다', error);
       raw = null;
     }
 
     const { settings, fixedFields } = parseSettings(raw);
     this.settings = settings;
     if (fixedFields.length > 0) {
-      console.warn(`[settings] 기본값으로 바꾼 항목: ${fixedFields.join(', ')}`);
+      logger.warn(`[settings] 기본값으로 바꾼 항목: ${fixedFields.join(', ')}`);
       await this.save({});
     }
   }
@@ -44,7 +45,12 @@ export class SettingsStore {
     const snapshot = JSON.stringify(this.settings, null, 2);
     this.writeQueue = this.writeQueue
       .then(() => this.writeAtomically(snapshot))
-      .catch((error: unknown) => console.warn('[settings] 설정을 저장하지 못했습니다', error));
+      .catch((error: unknown) => logger.warn('[settings] 설정을 저장하지 못했습니다', error));
+    return this.writeQueue;
+  }
+
+  /** 진행 중인 저장이 모두 끝날 때까지 기다린다 (종료·재시작 직전). */
+  flush(): Promise<void> {
     return this.writeQueue;
   }
 

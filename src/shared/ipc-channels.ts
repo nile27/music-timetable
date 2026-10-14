@@ -25,6 +25,8 @@ export const IPC = {
   SETTINGS_SAVE: 'settings:save',
   /** 화면 → 메인: 볼륨 변경 (0~1). 바꾸는 즉시 저장한다. */
   SETTINGS_SET_VOLUME: 'settings:setVolume',
+  /** 화면 → 메인: PC 켜질 때 자동 실행 켜기/끄기 (boolean). */
+  SETTINGS_SET_AUTO_LAUNCH: 'settings:setAutoLaunch',
 
   /** 화면 → 메인: "오늘은 재생 안 함" 켜기/끄기 (boolean). */
   DAY_SKIP_TODAY: 'day:skipToday',

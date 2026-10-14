@@ -49,6 +49,7 @@ const api: RendererApi = {
   saveSchedule: (schedule) =>
     ipcRenderer.invoke(IPC.SETTINGS_SAVE, schedule) as Promise<SaveScheduleResult>,
   setVolume: (volume) => ipcRenderer.send(IPC.SETTINGS_SET_VOLUME, volume),
+  setAutoLaunch: (isEnabled) => ipcRenderer.send(IPC.SETTINGS_SET_AUTO_LAUNCH, isEnabled),
 };
 
 contextBridge.exposeInMainWorld('api', api);

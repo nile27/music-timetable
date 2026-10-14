@@ -5,7 +5,7 @@ import type { Holiday, HolidayData } from '../shared/types';
 import { parseDateKey } from '../shared/day-rules';
 import bundledHolidays from './data/holidays.json';
 
-export type HolidayProvider = () => Promise<HolidayData>;
+export type HolidayProvider = () => Promise<{ data: HolidayData; droppedCount: number }>;
 
 /**
  * 공휴일 데이터 검사. 형식이 틀린 항목은 버리고(로그용으로 개수를 돌려줌), 수록 연도 밖 날짜도 버린다.
@@ -43,13 +43,12 @@ export function parseHolidayData(raw: unknown): { data: HolidayData; droppedCoun
   return { data: { years: validYears, holidays: valid }, droppedCount };
 }
 
-/** 1차 구현: 앱에 내장한 holidays.json. */
-export const bundledHolidayProvider: HolidayProvider = () => {
-  const { data, droppedCount } = parseHolidayData(bundledHolidays);
-  if (droppedCount > 0)
-    console.warn(`[holiday] 형식이 틀린 공휴일 ${droppedCount}개를 제외했습니다`);
-  return Promise.resolve(data);
-};
+/**
+ * 1차 구현: 앱에 내장한 holidays.json.
+ * 버린 항목 수는 호출하는 쪽이 로그로 남긴다 (이 파일은 테스트에서도 불러서 로거에 의존하지 않음).
+ */
+export const bundledHolidayProvider: HolidayProvider = () =>
+  Promise.resolve(parseHolidayData(bundledHolidays));
 
 /** 판정 함수에 넘길 날짜 키 → 이름 Map. */
 export function toHolidayMap(data: HolidayData): ReadonlyMap<string, string> {

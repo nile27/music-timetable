@@ -141,4 +141,5 @@ export interface RendererApi {
   getSettings: () => Promise<AppSettings>;
   saveSchedule: (schedule: ScheduleSlot[]) => Promise<SaveScheduleResult>;
   setVolume: (volume: number) => void;
+  setAutoLaunch: (isEnabled: boolean) => void;
 }
