@@ -41,3 +41,22 @@ export function toClock12(
     minute: time.slice(3),
   };
 }
+
+/** 곡 재생 시간 표시: 83.4초 → "1:23". 모르는 값(NaN·무한대·음수)은 "0:00". */
+export function formatMediaTime(seconds: number): string {
+  const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
+ * 사람이 입력한 시각을 "HH:mm"으로 맞춘다. 맞출 수 없으면 null.
+ * 연구원님이 "8:30", "830", "0830", "8.30"처럼 적어도 "08:30"으로 받아들이기 위함.
+ */
+export function normalizeTimeInput(text: string): string | null {
+  const trimmed = text.trim();
+  const match = /^(\d{1,2})[:.]?(\d{2})$/.exec(trimmed);
+  if (!match) return null;
+  const time = `${match[1].padStart(2, '0')}:${match[2]}`;
+  return parseTimeToMinutes(time) === null ? null : time;
+}

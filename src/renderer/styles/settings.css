@@ -1,0 +1,72 @@
+/* 설정 화면 (Figma 9:2, "설정 파일"·"프로그램 종료" 영역은 기능 삭제로 뺌) */
+
+.settings-card {
+  margin-top: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-16);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 88px;
+  padding: 18px 20px;
+}
+
+.settings-item-title {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 27px;
+}
+
+.settings-item-desc {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--text-2);
+}
+
+.settings-divider {
+  height: 1px;
+  margin: 0 20px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.app-info {
+  padding: 18px 20px;
+}
+
+.info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.info-row {
+  display: flex;
+  font-size: 15px;
+  line-height: 23px;
+}
+
+.info-key {
+  width: 100px;
+  color: var(--text-3);
+}
+
+.info-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 창 안내 (S-04): 종료 버튼 대신 –와 X의 차이를 알려준다 (FR-34) */
+.window-guide {
+  margin-top: auto;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--text-2);
+}

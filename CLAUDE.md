@@ -65,6 +65,9 @@ UI는 프레임워크 없이 HTML/CSS/TS. **목록에 없는 라이브러리는 
 - 주석은 한국어로, "무엇"보다 "왜"를 적는다.
 
 ## 디자인
+- 6단계 구현 완료. 값의 기준: Figma 디자인 시스템(11:2) + 전달 파일 `local전용/figma/`(아이콘·화면별 CSS·2배 PNG, git 제외). Figma MCP는 무료 요금제 호출 한도가 있어 아껴 쓴다
+- 색·간격은 `src/renderer/styles/tokens.css` 변수만 쓴다. 아이콘은 `src/renderer/assets/icons`(전달 파일 그대로, 다시 그리지 않음)
+- 글꼴은 `src/renderer/assets/fonts`에 내장, 라이선스는 `resources/licenses/IBM-Plex-Sans-KR-OFL.txt`(배포판에 포함)
 Figma: https://www.figma.com/design/Q7Qb5n7gAdBDj6oCWrW2o1
 6단계에서 Figma MCP로 **프레임 하나씩** 가져와 구현한다 (파일 전체를 한 번에 읽지 않는다).
 창 크기 960×640, 폰트 IBM Plex Sans KR (대체: Malgun Gothic).

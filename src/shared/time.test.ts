@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { getMinutesOfDay, parseTimeToMinutes, toClock12, toDateKey } from './time';
+import {
+  formatMediaTime,
+  getMinutesOfDay,
+  normalizeTimeInput,
+  parseTimeToMinutes,
+  toClock12,
+  toDateKey,
+} from './time';
 
 describe('parseTimeToMinutes', () => {
   it.each([
@@ -48,5 +55,37 @@ describe('toClock12', () => {
 
   it('형식이 틀리면 null', () => {
     expect(toClock12('8:30')).toBeNull();
+  });
+});
+
+describe('formatMediaTime', () => {
+  it.each([
+    [0, '0:00'],
+    [83.4, '1:23'],
+    [225, '3:45'],
+    [3600, '60:00'],
+    [Number.NaN, '0:00'],
+    [Number.POSITIVE_INFINITY, '0:00'],
+    [-5, '0:00'],
+  ])('%s초 → %s', (seconds, expected) => {
+    expect(formatMediaTime(seconds)).toBe(expected);
+  });
+});
+
+describe('normalizeTimeInput', () => {
+  it.each([
+    ['08:30', '08:30'],
+    ['8:30', '08:30'],
+    ['830', '08:30'],
+    ['0830', '08:30'],
+    ['8.30', '08:30'],
+    [' 13:00 ', '13:00'],
+    ['2359', '23:59'],
+  ])('%s → %s', (input, expected) => {
+    expect(normalizeTimeInput(input)).toBe(expected);
+  });
+
+  it.each(['', '24:00', '8:60', '12345', 'ab:cd', '8:3'])('%s → null', (input) => {
+    expect(normalizeTimeInput(input)).toBeNull();
   });
 });

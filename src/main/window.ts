@@ -12,6 +12,14 @@ export function createMainWindow(options: { startMinimized: boolean }): BrowserW
     height: WINDOW_HEIGHT,
     show: false,
     autoHideMenuBar: true,
+    // 창이 뜨는 순간 흰 화면이 번쩍이지 않게 앱 바탕색과 맞춘다.
+    backgroundColor: '#0B0C11',
+    // 디자인처럼 배경을 창 맨 위까지 채운다. Windows에서는 최소화·닫기 버튼만 오른쪽 위(140×32)에 남긴다.
+    // macOS(개발용)는 왼쪽 위 신호등 버튼이 그대로 보인다.
+    titleBarStyle: 'hidden',
+    ...(process.platform === 'darwin'
+      ? {}
+      : { titleBarOverlay: { color: '#00000000', symbolColor: '#FFFFFF', height: 32 } }),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       // 보안 기본값을 명시해 둔다. 바꾸지 말 것 (CLAUDE.md 금지 사항).

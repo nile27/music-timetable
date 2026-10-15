@@ -4,6 +4,7 @@ import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'ele
 import { IPC } from '../shared/ipc-channels';
 import type {
   AddFilesResult,
+  AppInfo,
   AppSettings,
   HolidayData,
   LibraryTrack,
@@ -50,6 +51,7 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC.SETTINGS_SAVE, schedule) as Promise<SaveScheduleResult>,
   setVolume: (volume) => ipcRenderer.send(IPC.SETTINGS_SET_VOLUME, volume),
   setAutoLaunch: (isEnabled) => ipcRenderer.send(IPC.SETTINGS_SET_AUTO_LAUNCH, isEnabled),
+  getAppInfo: () => ipcRenderer.invoke(IPC.APP_INFO) as Promise<AppInfo>,
 };
 
 contextBridge.exposeInMainWorld('api', api);

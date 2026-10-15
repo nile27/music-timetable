@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   findNextPlay,
+  getMinutesUntil,
   getOffDayReason,
   isPlayDay,
   parseDateKey,
@@ -157,5 +158,24 @@ describe('parseDateKey / addDays', () => {
   it('월·연도가 넘어가도 날짜 단위로 더한다', () => {
     expect(toDateKey(addDays(new Date(2026, 11, 31, 8, 30), 1))).toBe('2027-01-01');
     expect(toDateKey(addDays(new Date(2027, 1, 28), 1))).toBe('2027-03-01');
+  });
+});
+
+describe('getMinutesUntil', () => {
+  it('같은 날 남은 분 (초는 올림)', () => {
+    expect(getMinutesUntil(new Date(2026, 9, 14, 13, 28, 10), '2026-10-14', '14:00')).toBe(32);
+    expect(getMinutesUntil(new Date(2026, 9, 14, 13, 28, 0), '2026-10-14', '14:00')).toBe(32);
+  });
+
+  it('다음 날까지', () => {
+    expect(getMinutesUntil(new Date(2026, 9, 14, 20, 0), '2026-10-15', '08:30')).toBe(750);
+  });
+
+  it('이미 지났으면 0', () => {
+    expect(getMinutesUntil(new Date(2026, 9, 14, 14, 1), '2026-10-14', '14:00')).toBe(0);
+  });
+
+  it('형식이 틀리면 0', () => {
+    expect(getMinutesUntil(new Date(2026, 9, 14), 'bad', '14:00')).toBe(0);
   });
 });

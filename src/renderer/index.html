@@ -6,74 +6,28 @@
     <!-- 오프라인 앱: 로컬 자원과 media:// (음악·커버)만 허용한다 -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: media:; media-src 'self' media:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: media:; media-src 'self' media:; font-src 'self'"
     />
   </head>
 
   <body>
-    <!-- 문구는 messages.ts에서 채운다 -->
-    <div class="layout">
-      <div class="column">
-        <section class="player">
-          <div class="controls">
-            <button id="play-button" type="button"></button>
-            <button id="stop-button" type="button"></button>
-            <label class="volume">
-              <span id="volume-label"></span>
-              <input id="volume-slider" type="range" min="0" max="100" step="1" />
-            </label>
-          </div>
-          <p id="status" class="status" aria-live="polite"></p>
-          <p id="now-playing" class="now-playing"></p>
-          <button
-            id="skip-today-button"
-            class="skip-today"
-            type="button"
-            aria-pressed="false"
-          ></button>
-        </section>
-
-        <section class="schedule">
-          <h2 id="schedule-title"></h2>
-          <div id="schedule-rows" class="schedule-rows"></div>
-          <div class="schedule-actions">
-            <button id="add-slot-button" type="button"></button>
-            <span id="schedule-message" aria-live="polite"></span>
-            <button id="save-schedule-button" type="button"></button>
-          </div>
-        </section>
-
-        <section class="off-days">
-          <h2 id="off-day-title"></h2>
-          <p id="off-day-hint" class="hint"></p>
-          <div class="calendar-header">
-            <button id="calendar-prev" type="button"></button>
-            <span id="calendar-month"></span>
-            <button id="calendar-next" type="button"></button>
-          </div>
-          <div id="calendar-grid" class="calendar-grid"></div>
-        </section>
-
-        <section class="settings">
-          <h2 id="settings-title"></h2>
-          <label class="checkbox">
-            <input id="auto-launch-checkbox" type="checkbox" />
-            <span id="auto-launch-label"></span>
-          </label>
-        </section>
+    <!-- 화면 내용과 문구는 각 화면 모듈과 messages.ts에서 채운다 -->
+    <div id="app" class="app" data-tab="play" data-tone="idle">
+      <div class="bg" aria-hidden="true">
+        <div id="bg-cover-a" class="bg-cover"></div>
+        <div id="bg-cover-b" class="bg-cover is-hidden"></div>
+        <div class="bg-scrim"></div>
       </div>
+      <div class="drag-region" aria-hidden="true"></div>
 
-      <section class="library column">
-        <div id="drop-zone" class="drop-zone">
-          <p id="drop-message" aria-live="polite"></p>
-        </div>
-        <div class="library-header">
-          <span id="track-count"></span>
-          <button id="open-folder-button" type="button"></button>
-        </div>
-        <p id="empty-library" class="empty" hidden></p>
-        <ul id="track-list" class="track-list"></ul>
-      </section>
+      <nav id="nav" class="nav"></nav>
+
+      <main class="main">
+        <section id="view-play" class="view view-play is-active" data-view="play"></section>
+        <section id="view-schedule" class="view view-schedule" data-view="schedule"></section>
+        <section id="view-songs" class="view view-songs" data-view="songs"></section>
+        <section id="view-settings" class="view view-settings" data-view="settings"></section>
+      </main>
     </div>
 
     <script type="module" src="./renderer.ts"></script>

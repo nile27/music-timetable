@@ -1,10 +1,10 @@
 // 화면 ↔ 메인 IPC 처리. 화면에서 온 값은 믿지 않고 여기서 다시 검사한다 (컨벤션 5장).
-import { ipcMain, shell } from 'electron';
+import { app, ipcMain, shell } from 'electron';
 import { isWeekend, parseDateKey } from '../shared/day-rules';
 import { IPC } from '../shared/ipc-channels';
 import { normalizeSchedule, validateSchedule } from '../shared/schedule';
 import { toDateKey } from '../shared/time';
-import type { HolidayData, SaveScheduleResult, ScheduleSlot } from '../shared/types';
+import type { AppInfo, HolidayData, SaveScheduleResult, ScheduleSlot } from '../shared/types';
 import { toHolidayMap } from './holiday-provider';
 import type { MusicLibrary } from './library';
 import { logger } from './logger';
@@ -97,6 +97,10 @@ export function registerIpcHandlers(services: AppServices): void {
     return next;
   });
   ipcMain.handle(IPC.DAY_HOLIDAYS, () => holidayData);
+  ipcMain.handle(IPC.APP_INFO, (): AppInfo => ({
+    version: app.getVersion(),
+    holidayLastYear: holidayData.years.length > 0 ? Math.max(...holidayData.years) : null,
+  }));
 
   ipcMain.handle(IPC.LIBRARY_LIST, () => library.getTracks());
   ipcMain.handle(IPC.LIBRARY_ADD, (_event, paths: unknown) => library.addFiles(toPathList(paths)));

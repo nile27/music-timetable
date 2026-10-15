@@ -1,118 +1,99 @@
-import './style.css';
-import type { PlayerStatus } from '../shared/types';
+// 화면 전체 연결. 메인에서 오는 상태·곡 목록을 받아 각 화면에 나눠 준다.
+import './styles/tokens.css';
+import './styles/base.css';
+import './styles/play.css';
+import './styles/schedule.css';
+import './styles/songs.css';
+import './styles/settings.css';
+import type { LibraryTrack, PlayerStatus } from '../shared/types';
+import { getCoverBackground } from './cover';
+import { el } from './dom';
 import { setupLibraryView } from './library-view';
-import { setupOffDayCalendar } from './off-day-calendar';
 import { MESSAGES } from './messages';
+import { setupOffDayCalendar } from './off-day-calendar';
+import { buildPlayViewModel } from './play-state';
+import { setupPlayView } from './play-view';
 import { AudioPlayer } from './player';
 import { setupScheduleEditor } from './schedule-editor';
 import { setupSettingsPanel } from './settings-panel';
+import { setupShell } from './shell';
 
-function getElement<T extends HTMLElement>(id: string): T {
+// "32분 남음" 같은 남은 시간은 상태가 바뀌지 않아도 줄어드므로 주기적으로 다시 그린다.
+const CLOCK_REFRESH_MS = 15_000;
+
+function getElement(id: string): HTMLElement {
   const element = document.getElementById(id);
   if (!element) throw new Error(`#${id} element not found`);
-  return element as T;
-}
-
-/** 상태 줄 문구 (NFR-05: 지금 무엇을 하는지, 다음에 언제 트는지 항상 보이게). */
-function describeStatus(status: PlayerStatus): string {
-  if (status.mode === 'playing' && status.activeSlot) {
-    return MESSAGES.statusPlayingSlot(status.activeSlot);
-  }
-  if (status.mode === 'manual') return MESSAGES.statusManual;
-  if (status.isMissingTracks) return MESSAGES.statusNoTracks;
-
-  const next = status.nextPlay ? MESSAGES.statusNext(status.nextPlay) : MESSAGES.statusNoSchedule;
-  if (status.offDayReason) return `${MESSAGES.statusOffDay(status.offDayReason)}\n${next}`;
-  return status.activeSlot ? `${MESSAGES.statusStoppedInSlot(status.activeSlot)}\n${next}` : next;
+  return element;
 }
 
 function init(): void {
-  const playButton = getElement<HTMLButtonElement>('play-button');
-  const stopButton = getElement<HTMLButtonElement>('stop-button');
-  const statusText = getElement('status');
-  const nowPlaying = getElement('now-playing');
-  const volumeLabel = getElement('volume-label');
-  const volumeSlider = getElement<HTMLInputElement>('volume-slider');
-  const skipTodayButton = getElement<HTMLButtonElement>('skip-today-button');
-
   document.title = MESSAGES.appTitle;
-  playButton.textContent = MESSAGES.play;
-  stopButton.textContent = MESSAGES.stop;
-  volumeLabel.textContent = MESSAGES.volume;
 
+  const shell = setupShell(getElement('app'), getElement('nav'));
   const player = new AudioPlayer({
     onEnded: (trackId) => window.api.notifyEnded(trackId),
     onError: (trackId) => window.api.notifyError(trackId),
+    onProgress: (currentTime, duration) => playView.setProgress(currentTime, duration),
+  });
+  const playView = setupPlayView(getElement('view-play'), {
+    onVolumeInput: (volume) => player.setVolume(volume),
   });
 
-  // 버튼은 메인에 요청만 보낸다. 실제 재생·정지는 메인의 지시(onPlay/onStop)로 일어난다.
-  playButton.addEventListener('click', () => window.api.requestPlay());
-  stopButton.addEventListener('click', () => window.api.requestStop());
-
-  window.api.onPlay((track) => {
-    player.play(track);
-    nowPlaying.textContent = MESSAGES.nowPlaying(track.title);
-  });
-  window.api.onStop(() => {
-    player.stop();
-    nowPlaying.textContent = '';
-  });
-
-  // 끄는 동안(input)은 소리에만 반영하고, 손을 뗄 때(change) 저장한다 (FR-08).
-  volumeSlider.addEventListener('input', () => player.setVolume(Number(volumeSlider.value) / 100));
-  volumeSlider.addEventListener('change', () =>
-    window.api.setVolume(Number(volumeSlider.value) / 100),
+  const scheduleView = getElement('view-schedule');
+  scheduleView.append(
+    el('h1', 'page-title', MESSAGES.scheduleTitle),
+    el('p', 'page-subtitle', MESSAGES.scheduleSubtitle),
   );
-  void window.api.getSettings().then((settings) => {
-    volumeSlider.value = String(Math.round(settings.volume * 100));
-    player.setVolume(settings.volume);
-  });
+  const scheduleBody = el('div', 'schedule-body');
+  scheduleView.append(scheduleBody);
+  setupScheduleEditor(scheduleBody);
+  setupOffDayCalendar(scheduleBody);
 
-  const library = setupLibraryView({
-    dropZone: getElement('drop-zone'),
-    dropMessage: getElement('drop-message'),
-    count: getElement('track-count'),
-    openFolderButton: getElement<HTMLButtonElement>('open-folder-button'),
-    list: getElement<HTMLUListElement>('track-list'),
-    empty: getElement('empty-library'),
-  });
+  const library = setupLibraryView(getElement('view-songs'));
+  setupSettingsPanel(getElement('view-settings'));
 
-  // "오늘은 재생 안 함" 토글 (FR-13). 상태는 메인 상태 알림을 따른다 (다음 날 자동 해제도 그대로 반영).
-  let isSkippingToday = false;
-  skipTodayButton.addEventListener('click', () => window.api.setSkipToday(!isSkippingToday));
+  let tracks: readonly LibraryTrack[] = [];
+  let status: PlayerStatus | null = null;
 
-  const renderStatus = (status: PlayerStatus): void => {
-    statusText.textContent = describeStatus(status);
-    library.setNextTrackId(status.nextTrackId);
-    isSkippingToday = status.isSkippingToday;
-    skipTodayButton.textContent = isSkippingToday ? MESSAGES.unskipToday : MESSAGES.skipToday;
-    skipTodayButton.setAttribute('aria-pressed', String(isSkippingToday));
+  const refresh = (): void => {
+    if (!status) return;
+    const viewModel = buildPlayViewModel(status, tracks, new Date());
+    shell.setTone(viewModel.tone);
+    shell.setMiniStatus(viewModel.pill, viewModel.miniText);
+    shell.setBackground(
+      getCoverBackground(viewModel.track?.coverUrl ?? null, viewModel.track?.id ?? ''),
+    );
+    playView.render(viewModel, status.isSkippingToday);
+    library.setMarks(viewModel.isSounding ? status.currentTrackId : null, status.nextTrackId);
   };
-  void window.api.getStatus().then(renderStatus);
-  window.api.onStatus(renderStatus);
 
-  setupScheduleEditor({
-    title: getElement('schedule-title'),
-    rows: getElement('schedule-rows'),
-    addButton: getElement<HTMLButtonElement>('add-slot-button'),
-    saveButton: getElement<HTMLButtonElement>('save-schedule-button'),
-    message: getElement('schedule-message'),
-  });
+  // 재생·정지는 메인의 지시로만 일어난다 (판단은 main, 소리는 renderer).
+  window.api.onPlay((track) => player.play(track));
+  window.api.onStop(() => player.stop());
 
-  setupOffDayCalendar({
-    title: getElement('off-day-title'),
-    hint: getElement('off-day-hint'),
-    monthLabel: getElement('calendar-month'),
-    previousButton: getElement<HTMLButtonElement>('calendar-prev'),
-    nextButton: getElement<HTMLButtonElement>('calendar-next'),
-    grid: getElement('calendar-grid'),
+  window.api.onStatus((next) => {
+    status = next;
+    refresh();
   });
-
-  setupSettingsPanel({
-    title: getElement('settings-title'),
-    autoLaunchCheckbox: getElement<HTMLInputElement>('auto-launch-checkbox'),
-    autoLaunchLabel: getElement('auto-launch-label'),
+  window.api.onLibraryChanged((next) => {
+    tracks = next;
+    library.render(tracks);
+    refresh();
   });
+  void Promise.all([
+    window.api.listTracks(),
+    window.api.getStatus(),
+    window.api.getSettings(),
+  ]).then(([initialTracks, initialStatus, settings]) => {
+    tracks = initialTracks;
+    status = initialStatus;
+    library.render(tracks);
+    player.setVolume(settings.volume);
+    playView.setVolume(settings.volume);
+    refresh();
+  });
+  window.setInterval(refresh, CLOCK_REFRESH_MS);
 }
 
 init();

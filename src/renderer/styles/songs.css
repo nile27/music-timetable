@@ -1,0 +1,175 @@
+/* 노래 화면 (Figma 8:2) */
+
+.songs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+}
+
+.songs-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.song-count {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.btn-open-folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 19px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-12);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.btn-open-folder:hover {
+  background: var(--surface-3);
+}
+
+/* 드래그 영역 */
+.dropzone {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  height: 100px;
+  margin-top: 16px;
+  padding: 0 20px;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  border-radius: var(--r-16);
+  background: rgba(255, 255, 255, 0.05);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+/* 끌어다 놓는 중 (디자인 전달 파일의 제안값) */
+.dropzone.is-dragover {
+  border-color: var(--state-playing);
+  background: rgba(255, 194, 75, 0.1);
+}
+
+.dropzone .icon {
+  color: var(--state-playing);
+}
+
+.dropzone-text {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 27px;
+}
+
+/* 추가 결과 안내 ("2곡을 추가했어요." 등)는 여러 줄일 수 있어 작게 */
+.dropzone-text.is-result {
+  overflow: hidden;
+  max-height: 84px;
+  font-size: 15px;
+  line-height: 21px;
+  white-space: pre-line;
+}
+
+/* 곡 목록 */
+.song-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  margin: 16px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.song-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 14px;
+  height: 56px;
+  padding: 0 14px;
+  border-radius: var(--r-12);
+}
+
+.song-row.is-now {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.song-row.is-next {
+  background: rgba(142, 197, 255, 0.08);
+}
+
+.song-no {
+  flex: none;
+  width: 24px;
+  text-align: right;
+  font-size: 15px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.song-thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-8);
+}
+
+.song-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 17px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.song-text-title {
+  font-weight: 600;
+}
+
+.song-text-artist {
+  color: var(--text-2);
+}
+
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.badge.is-now {
+  background: var(--state-playing-soft);
+  color: var(--state-playing);
+}
+
+.badge.is-next {
+  background: var(--state-idle-soft);
+  color: var(--state-idle);
+}
+
+.songs-empty {
+  margin: auto;
+  font-size: 16px;
+  color: var(--text-2);
+}
+
+.songs-empty[hidden] {
+  display: none;
+}

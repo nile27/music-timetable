@@ -1,0 +1,68 @@
+/* 디자인 토큰 (Figma 11:2 디자인 시스템 + 전달 파일 local전용/figma/styles).
+   값을 바꿀 때는 Figma 디자인 시스템과 함께 바꾼다. */
+:root {
+  --font: 'IBM Plex Sans KR', 'Malgun Gothic', sans-serif;
+
+  /* 바탕 */
+  --bg-base: #0b0c11;
+  --bg-scrim-play: rgba(9, 10, 15, 0.6); /* 재생 화면: 커버가 더 보이게 */
+  --bg-scrim: rgba(9, 10, 15, 0.72); /* 시간표·노래·설정: 글자·입력칸이 많아 더 어둡게 */
+
+  /* 면·선 */
+  --surface-1: rgba(255, 255, 255, 0.06);
+  --surface-2: rgba(255, 255, 255, 0.08);
+  --surface-3: rgba(255, 255, 255, 0.14);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.24);
+
+  /* 글자 */
+  --text-1: #ffffff;
+  --text-2: rgba(255, 255, 255, 0.74);
+  --text-3: rgba(255, 255, 255, 0.6);
+
+  /* 상태 */
+  --state-playing: #ffc24b;
+  --state-playing-soft: rgba(255, 194, 75, 0.16);
+  --on-accent: #1a1206;
+  --state-idle: #8ec5ff;
+  --state-idle-soft: rgba(142, 197, 255, 0.16);
+  --state-off: #c9cbd3;
+  --state-off-soft: rgba(255, 255, 255, 0.12);
+  --danger-text: #ff8a80;
+  --danger-border: #ff6b5e;
+  --success-text: #8ee3b0;
+
+  /* 모서리 */
+  --r-8: 8px;
+  --r-10: 10px;
+  --r-12: 12px;
+  --r-16: 16px;
+  --r-20: 20px;
+  --r-pill: 999px;
+
+  /* 크기 */
+  --nav-width: 200px;
+  --gutter: 32px;
+  --caption-height: 32px; /* 위쪽 끌기 여백 */
+  --caption-width: 140px; /* Windows 최소화·닫기 버튼 자리 (비워 둠) */
+
+  /* 커버가 없을 때 (디자인 예시 커버 A) */
+  --cover-fallback:
+    radial-gradient(circle at 22% 28%, #ff8a5b 0%, rgba(255, 138, 91, 0) 55%),
+    radial-gradient(circle at 78% 72%, #7c5cff 0%, rgba(124, 92, 255, 0) 60%),
+    radial-gradient(circle at 82% 18%, #ffd166 0%, rgba(255, 209, 102, 0) 45%), #2a1b3d;
+}
+
+/* 재생 상태에 따라 강조색이 바뀐다 (상태 알약·남은 시간·사이드바 상태). */
+.app[data-tone='playing'] {
+  --tone: var(--state-playing);
+  --tone-soft: var(--state-playing-soft);
+}
+.app[data-tone='idle'] {
+  --tone: var(--state-idle);
+  --tone-soft: var(--state-idle-soft);
+}
+.app[data-tone='off'] {
+  --tone: var(--state-off);
+  --tone-soft: var(--state-off-soft);
+}

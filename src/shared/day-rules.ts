@@ -91,3 +91,15 @@ export function findNextPlay(
   }
   return null;
 }
+
+/**
+ * 지금부터 그 날짜·시각까지 남은 분 (올림, 0 이상). "32분 남음", "1시간 12분 뒤" 표시용.
+ * 올림하는 이유: 13:28:10에 14:00까지는 31분 50초 → "32분 남음"이 사람이 기대하는 값.
+ */
+export function getMinutesUntil(now: Date, dateKey: string, time: string): number {
+  const date = parseDateKey(dateKey);
+  const minutes = parseTimeToMinutes(time);
+  if (!date || minutes === null) return 0;
+  date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return Math.max(0, Math.ceil((date.getTime() - now.getTime()) / 60_000));
+}

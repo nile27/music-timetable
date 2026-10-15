@@ -111,6 +111,13 @@ export interface PlayerStatus {
 export type SaveScheduleResult =
   { ok: true; settings: AppSettings } | { ok: false; issues: ScheduleIssue[] };
 
+/** 설정 화면 "앱 정보" (S-04). */
+export interface AppInfo {
+  version: string;
+  /** 내장 공휴일 수록 마지막 해. 없으면 null. */
+  holidayLastYear: number | null;
+}
+
 /** preload가 window.api로 노출하는 기능. 화면은 이것만 쓴다. */
 export interface RendererApi {
   requestPlay: () => void;
@@ -142,4 +149,5 @@ export interface RendererApi {
   saveSchedule: (schedule: ScheduleSlot[]) => Promise<SaveScheduleResult>;
   setVolume: (volume: number) => void;
   setAutoLaunch: (isEnabled: boolean) => void;
+  getAppInfo: () => Promise<AppInfo>;
 }

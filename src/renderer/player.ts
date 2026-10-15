@@ -5,13 +5,15 @@ import type { Track } from '../shared/types';
 export interface AudioPlayerCallbacks {
   onEnded: (trackId: string) => void;
   onError: (trackId: string) => void;
+  /** 진행 막대 표시용 (초 단위). 정지하면 (0, 0). */
+  onProgress: (currentTime: number, duration: number) => void;
 }
 
 export class AudioPlayer {
   private readonly audio = new Audio();
   private currentTrackId: string | null = null;
 
-  constructor(callbacks: AudioPlayerCallbacks) {
+  constructor(private readonly callbacks: AudioPlayerCallbacks) {
     this.audio.addEventListener('ended', () => {
       if (this.currentTrackId) callbacks.onEnded(this.currentTrackId);
     });
@@ -19,20 +21,26 @@ export class AudioPlayer {
     this.audio.addEventListener('error', () => {
       if (this.currentTrackId) callbacks.onError(this.currentTrackId);
     });
-    this.onPlayRejected = (error: unknown) => {
-      // 재생 시작 전에 정지하면 play()가 AbortError로 끝난다. 실패가 아니므로 무시한다.
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      console.error('[player] play failed', error);
-      if (this.currentTrackId) callbacks.onError(this.currentTrackId);
+    const reportProgress = (): void => {
+      if (this.currentTrackId) callbacks.onProgress(this.audio.currentTime, this.audio.duration);
     };
+    this.audio.addEventListener('timeupdate', reportProgress);
+    this.audio.addEventListener('loadedmetadata', reportProgress);
   }
 
-  private readonly onPlayRejected: (error: unknown) => void;
+  get isPlaying(): boolean {
+    return this.currentTrackId !== null;
+  }
 
   play(track: Track): void {
     this.currentTrackId = track.id;
     this.audio.src = track.url;
-    this.audio.play().catch(this.onPlayRejected);
+    this.audio.play().catch((error: unknown) => {
+      // 재생 시작 전에 정지하면 play()가 AbortError로 끝난다. 실패가 아니므로 무시한다.
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      console.error('[player] play failed', error);
+      if (this.currentTrackId) this.callbacks.onError(this.currentTrackId);
+    });
   }
 
   stop(): void {
@@ -41,6 +49,7 @@ export class AudioPlayer {
     // src를 비워야 파일 스트림이 닫혀 다음 재생 때 처음부터 새로 받는다.
     this.audio.removeAttribute('src');
     this.audio.load();
+    this.callbacks.onProgress(0, 0);
   }
 
   /** 0~1 */

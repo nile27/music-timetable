@@ -28,6 +28,9 @@ export const IPC = {
   /** 화면 → 메인: PC 켜질 때 자동 실행 켜기/끄기 (boolean). */
   SETTINGS_SET_AUTO_LAUNCH: 'settings:setAutoLaunch',
 
+  /** 화면 → 메인 (invoke): 앱 버전·공휴일 수록 연도 → AppInfo */
+  APP_INFO: 'app:info',
+
   /** 화면 → 메인: "오늘은 재생 안 함" 켜기/끄기 (boolean). */
   DAY_SKIP_TODAY: 'day:skipToday',
   /** 화면 → 메인 (invoke): 쉬는 날 지정/해제 ("YYYY-MM-DD") → 바뀐 offDays */

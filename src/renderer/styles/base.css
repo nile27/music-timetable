@@ -1,0 +1,291 @@
+/* 글꼴은 앱에 함께 넣는다 (오프라인이라 Google Fonts를 쓸 수 없음, OFL 라이선스). */
+@font-face {
+  font-family: 'IBM Plex Sans KR';
+  font-weight: 400;
+  src: url('../assets/fonts/IBMPlexSansKR-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans KR';
+  font-weight: 600;
+  src: url('../assets/fonts/IBMPlexSansKR-SemiBold.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans KR';
+  font-weight: 700;
+  src: url('../assets/fonts/IBMPlexSansKR-Bold.woff2') format('woff2');
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  color: var(--text-1);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--text-1);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.icon svg {
+  display: block;
+}
+
+/* 어두운 화면에 맞춘 얇은 스크롤 막대 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------- 전체 틀 ---------- */
+
+.app {
+  position: relative;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 배경: 지금 곡(대기 중이면 다음 곡) 커버를 크게 흐리게 깔고 어두운 막을 씌운다. */
+.bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-cover {
+  position: absolute;
+  inset: -120px; /* 가장자리 흐림이 비지 않도록 창보다 크게 */
+  background: var(--cover-fallback);
+  filter: blur(80px) saturate(1.2);
+  transform: scale(1.1);
+  transition: opacity 0.8s ease;
+}
+
+.bg-cover.is-hidden {
+  opacity: 0;
+}
+
+.bg-scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-scrim);
+  transition: background 0.3s ease;
+}
+
+.app[data-tab='play'] .bg-scrim {
+  background: var(--bg-scrim-play);
+}
+
+/* 창 맨 위 32px은 끌어서 창을 옮기는 곳. 오른쪽 140px은 Windows 창 버튼 자리라 비워 둔다. */
+.drag-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: var(--caption-width);
+  height: var(--caption-height);
+  z-index: 10;
+  -webkit-app-region: drag;
+}
+
+/* ---------- 탭 메뉴 ---------- */
+
+.nav {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: var(--nav-width);
+  padding: 20px 16px 24px;
+  background: rgba(0, 0, 0, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  height: 60px;
+  padding: 4px 10px 0;
+}
+
+.nav-brand .icon {
+  margin-top: 1px;
+  color: var(--state-playing);
+}
+
+.nav-brand-text {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.nav-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--r-12);
+  background: transparent;
+  color: var(--text-2);
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.nav-tab:hover:not(.is-active) {
+  background: var(--surface-2);
+  color: var(--text-1);
+}
+
+.nav-tab.is-active {
+  background: var(--surface-3);
+  color: var(--text-1);
+}
+
+/* "지금 상태" 카드 — 어느 탭에서든 다음 재생 일정이 보이게 (NFR-05) */
+.mini-status {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--r-12);
+  background: var(--surface-1);
+}
+
+.mini-status-label {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--text-3);
+}
+
+.mini-status-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--tone);
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--tone);
+}
+
+.mini-status-text {
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--text-2);
+}
+
+/* ---------- 본문 ---------- */
+
+.main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.view {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 44px var(--gutter) 28px;
+}
+
+.view.is-active {
+  display: flex;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+/* ---------- 공통 조각 ---------- */
+
+/* 토글 (60×34) */
+.toggle {
+  position: relative;
+  flex: none;
+  width: 60px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--border-strong);
+  transition: background 0.15s ease;
+}
+
+.toggle[aria-checked='true'] {
+  background: var(--state-playing);
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--text-1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: left 0.15s ease;
+}
+
+.toggle[aria-checked='true'] .toggle-knob {
+  left: 29px;
+}
