@@ -18,6 +18,7 @@ UI는 프레임워크 없이 HTML/CSS/TS. **목록에 없는 라이브러리는 
 ## 명령어 (1단계에서 package.json에 아래 이름으로 맞춘다)
 - `npm run dev` 개발 실행 · `npm run build:win` Windows 설치 파일
 - `npm run typecheck` · `npm run lint` · `npm run format` · `npm run test` (= `vitest run`)
+- `npm run build:win`은 맥에서 바로 된다 (Wine·Docker 불필요). 결과는 `dist/`, 설치 파일에 들어가는 것은 `electron-builder.yml` files 화이트리스트로만 정한다
 
 ## 폴더 구조
 - `src/main` 메인 프로세스: scheduler, day-service, library, settings, window(창·자동 실행·재시작)

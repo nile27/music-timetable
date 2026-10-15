@@ -1,0 +1,19 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>음악 시간표 - 사용설명서</title><style>
+@font-face { font-family: Plex; font-weight: 400; src: url('../../src/renderer/assets/fonts/IBMPlexSansKR-Regular.woff2'); }
+@font-face { font-family: Plex; font-weight: 600; src: url('../../src/renderer/assets/fonts/IBMPlexSansKR-SemiBold.woff2'); }
+@font-face { font-family: Plex; font-weight: 700; src: url('../../src/renderer/assets/fonts/IBMPlexSansKR-Bold.woff2'); }
+@page { size: A4; margin: 10mm 13mm; }
+body { font-family: Plex, 'Malgun Gothic', sans-serif; font-size: 10pt; line-height: 1.5; color: #14151b; margin: 0; }
+h1 { font-size: 18pt; margin: 0 0 4pt; }
+h2 { font-size: 12pt; margin: 7pt 0 2pt; padding-bottom: 2pt; border-bottom: 1.5pt solid #ffc24b; }
+p { margin: 3pt 0; }
+ul, ol { margin: 2pt 0; padding-left: 16pt; }
+li { margin: 1pt 0; } li.nested { margin-left: 14pt; list-style: circle; }
+table { width: 100%; border-collapse: collapse; margin: 4pt 0; }
+th, td { border: 0.75pt solid #c9cbd3; padding: 3pt 5pt; text-align: left; vertical-align: top; }
+th { background: #f3f3f5; }
+code { font-family: Menlo, Consolas, monospace; font-size: 0.9em; background: #f3f3f5; padding: 0 2pt; border-radius: 2pt; }
+img { display: block; width: 42%; margin: 4pt auto; border-radius: 6pt; }
+.box { display: inline-block; width: 9pt; height: 9pt; border: 1pt solid #14151b; border-radius: 1.5pt; vertical-align: -1pt; }
+tr, li, h2 { break-inside: avoid; } h2 { break-after: avoid; }
+</style></head><body><h1>음악 시간표 사용 설명서</h1><p>정해진 시간(등교·점심·하교)이 되면 음악이 <strong>저절로 나오고 저절로 멈춥니다.</strong> 평일에만 나오고, 주말·공휴일은 쉽니다.</p><p><img alt="재생 화면" src="../images/play-waiting.png"></p><h2>꼭 기억할 것: 숨길 때는 –, X는 종료</h2><table><thead><tr><th>버튼</th><th>하는 일</th></tr></thead><tbody><tr><td><strong>–</strong> (창 오른쪽 위)</td><td>창만 숨겨요. <strong>음악은 정해진 시간에 그대로 나와요.</strong></td></tr><tr><td><strong>X</strong> (창 오른쪽 위)</td><td>프로그램이 꺼져요. <strong>정해진 시간에 음악이 나오지 않아요.</strong></td></tr></tbody></table><p>실수로 X를 눌렀다면 <strong>바탕화면의 "음악 시간표" 아이콘</strong>을 눌러 다시 켜 주세요. PC를 다시 켜도 저절로 켜져요.</p><h2>화면 둘러보기 (왼쪽 탭)</h2><ul><li class=""><strong>재생</strong>: 지금 상태와 다음 재생 시간이 보여요. [정지]·[지금 재생]으로 직접 끄고 켤 수 있어요.</li><li class=""><strong>시간표</strong>: 음악이 나오는 시간과 쉬는 날을 정해요.</li><li class=""><strong>노래</strong>: 음악 파일을 넣고 목록을 봐요.</li><li class=""><strong>설정</strong>: PC 켜질 때 자동 실행을 켜고 끌 수 있어요.</li></ul><h2>노래 넣기·빼기</h2><ol><li class=""><strong>노래</strong> 탭을 눌러요.</li><li class="">음악 파일(mp3, wav, ogg, m4a)을 점선 상자 안으로 <strong>끌어다 놓아요.</strong> "N곡을 추가했어요"가 나오면 끝이에요.</li><li class="">빼고 싶을 때는 <strong>[폴더 열기]</strong>를 눌러 열린 폴더에서 파일을 지워요. 목록에서 바로 사라져요.</li><li class="">나오는 순서는 <strong>파일 이름 순서</strong>예요. 순서를 바꾸고 싶으면 파일 이름 앞에 <code>01_</code>, <code>02_</code>처럼 번호를 붙여요.</li></ol><h2>시간 바꾸기</h2><ol><li class=""><strong>시간표</strong> 탭에서 시작·끝 칸에 시간을 적어요 (예: <code>08:30</code>, <code>830</code>도 돼요).</li><li class="">시간이 겹치거나 잘못되면 빨간 글씨가 나와요. 고치면 <strong>[저장]</strong>을 누를 수 있어요.</li><li class=""><strong>[시간 추가]</strong>로 새 시간을 만들고, 휴지통 버튼으로 지워요. 꼭 <strong>[저장]</strong>을 눌러 주세요.</li></ol><h2>쉬는 날</h2><ul><li class=""><strong>며칠 뒤 쉬는 날</strong>(임시공휴일, 행사 등): <strong>시간표</strong> 탭 오른쪽 달력에서 그 날짜를 눌러요. 노란색이 되면 쉬는 날이에요. 다시 누르면 풀려요.</li><li class=""><strong>오늘만 급하게 끄기</strong>: <strong>재생</strong> 탭 아래 <strong>"오늘은 재생 안 함"</strong>을 켜요. 내일은 저절로 다시 나와요.</li><li class="">주말과 공휴일(2027년까지)은 따로 정하지 않아도 쉬어요.</li></ul><h2>소리가 안 나요</h2><ol><li class="">PC 볼륨이 꺼져 있거나(음소거) 너무 작은지 확인해요.</li><li class=""><strong>재생</strong> 탭 위쪽 글씨를 봐요. "오늘은 쉬는 날이에요"라면 쉬는 날이에요.</li><li class=""><strong>노래</strong> 탭에 노래가 있는지 확인해요.</li><li class="">그래도 안 되면 프로그램을 X로 껐다가 바탕화면 아이콘으로 다시 켜요.</li></ol></body></html>

@@ -1,20 +1,16 @@
-# Windows 배포 설정은 7단계에서 마무리한다 (앱 이름·아이콘·설치 옵션).
+# Windows 배포 설정 (7단계). 맥에서 `npm run build:win`으로 바로 만들 수 있다 (electron-builder 26은 Wine 불필요).
 appId: com.music-timetable.app
+# 내부 이름은 영문으로 둔다: 설정·로그 폴더가 %APPDATA%\music-timetable 으로 고정되어 찾기 쉽다.
+# 사람이 보는 이름(바로가기·제거 목록·창 제목)은 "음악 시간표".
 productName: music-timetable
 directories:
   buildResources: build
+# 넣을 것만 적는다 (화이트리스트). 빼는 방식으로는 local전용/·CLAUDE.local.md 같은 개인 파일이 섞여 들어갔다.
+# node_modules의 실행용 의존성은 electron-builder가 따로 넣는다.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!docs/*'
-  - '!music/*'
-  - '!.claude/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!vitest.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,CLAUDE.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
-  # 기본 커버는 아래 extraResources로 따로 넣으므로 asar에는 중복으로 넣지 않는다.
+  - out/**
+  - package.json
+  - resources/**
   - '!resources/cover/**'
 asarUnpack:
   - resources/**
@@ -28,9 +24,21 @@ extraResources:
       - CREDITS.md
 win:
   executableName: music-timetable
+  target:
+    - target: nsis
+      arch: x64
+# 설치 파일을 실행하면 질문 없이 바로 설치되고 실행된다 (NFR-06). 사용자 폴더에 설치해 관리자 권한이 필요 없다.
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
+  oneClick: true
+  perMachine: false
+  runAfterFinish: true
+  artifactName: music-timetable-${version}-setup.${ext}
+  shortcutName: 음악 시간표
+  uninstallDisplayName: 음악 시간표
   createDesktopShortcut: always
+  createStartMenuShortcut: true
+  # 지워도 설정·로그는 남겨 둔다 (다시 설치하면 이어서 동작).
+  deleteAppDataOnUninstall: false
 npmRebuild: false
+# 자동 업데이트를 쓰지 않는다 (오프라인). 없으면 git 원격 주소를 보고 업데이트 설정을 만들어 넣는다.
+publish: null
