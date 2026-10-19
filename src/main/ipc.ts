@@ -48,6 +48,8 @@ export function registerIpcHandlers(services: AppServices): void {
   // 무엇을 틀지는 메인(스케줄러)이 정한다 (판단은 main, 소리는 renderer).
   ipcMain.on(IPC.PLAYER_REQUEST_PLAY, () => scheduler.requestPlay());
   ipcMain.on(IPC.PLAYER_REQUEST_STOP, () => scheduler.requestStop());
+  ipcMain.on(IPC.PLAYER_REQUEST_NEXT, () => scheduler.requestNext());
+  ipcMain.on(IPC.PLAYER_REQUEST_PREVIOUS, () => scheduler.requestPrevious());
   ipcMain.on(IPC.PLAYER_REQUEST_PLAY_TRACK, (_event, trackId: unknown) =>
     scheduler.requestPlayTrack(trackId),
   );

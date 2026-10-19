@@ -130,6 +130,10 @@ export interface RendererApi {
   requestStop: () => void;
   /** 노래 목록에서 고른 곡부터 재생한다 (재생 중이면 그 곡으로 바꾼다). */
   playTrack: (trackId: string) => void;
+  /** 재생 중인 곡을 건너뛰고 다음 곡을 튼다 (정지 상태면 아무것도 안 함). */
+  requestNext: () => void;
+  /** 지금 곡 바로 위 곡으로 돌아간다 (정지 상태면 아무것도 안 함). */
+  requestPrevious: () => void;
   /** 메인의 재생 지시를 받는다. 반환값을 호출하면 구독이 해제된다. */
   onPlay: (listener: (track: Track) => void) => () => void;
   onStop: (listener: () => void) => () => void;

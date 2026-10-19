@@ -25,6 +25,8 @@ const api: RendererApi = {
   requestPlay: () => ipcRenderer.send(IPC.PLAYER_REQUEST_PLAY),
   requestStop: () => ipcRenderer.send(IPC.PLAYER_REQUEST_STOP),
   playTrack: (trackId) => ipcRenderer.send(IPC.PLAYER_REQUEST_PLAY_TRACK, trackId),
+  requestNext: () => ipcRenderer.send(IPC.PLAYER_REQUEST_NEXT),
+  requestPrevious: () => ipcRenderer.send(IPC.PLAYER_REQUEST_PREVIOUS),
   onPlay: (listener) => subscribe<Track>(IPC.PLAYER_PLAY, listener),
   onStop: (listener) => subscribe<void>(IPC.PLAYER_STOP, () => listener()),
 

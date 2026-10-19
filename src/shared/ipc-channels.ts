@@ -7,6 +7,10 @@ export const IPC = {
   PLAYER_REQUEST_STOP: 'player:requestStop',
   /** 화면 → 메인: 노래 목록에서 곡을 두 번 눌렀다 (트랙 id). 그 곡부터 재생한다. */
   PLAYER_REQUEST_PLAY_TRACK: 'player:requestPlayTrack',
+  /** 화면 → 메인: [다음 곡] 버튼을 눌렀다. 재생 중일 때만 다음 곡으로 넘긴다. */
+  PLAYER_REQUEST_NEXT: 'player:requestNext',
+  /** 화면 → 메인: [이전 곡] 버튼을 눌렀다. 재생 중일 때만 바로 위 곡으로 돌아간다. */
+  PLAYER_REQUEST_PREVIOUS: 'player:requestPrevious',
   /** 메인 → 화면: 이 곡을 재생하라 (Track). */
   PLAYER_PLAY: 'player:play',
   /** 메인 → 화면: 즉시 정지하라. */

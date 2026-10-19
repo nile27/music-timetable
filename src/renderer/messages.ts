@@ -89,6 +89,8 @@ export const MESSAGES = {
   noTrackArtist: '노래 탭에서 음악 파일을 추가해주세요',
   stop: '정지',
   playNow: '지금 재생',
+  nextTrack: '다음 곡',
+  previousTrack: '이전 곡',
   volume: '볼륨',
   volumeValue: (percent: number): string => `${percent}%`,
 

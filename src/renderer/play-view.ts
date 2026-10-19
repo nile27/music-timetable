@@ -35,6 +35,21 @@ export function setupPlayView(container: HTMLElement, actions: PlayViewActions):
   const playButton = el('button', 'btn-play');
   playButton.type = 'button';
 
+  // [이전 곡]·[다음 곡]은 재생 중에만 보인다. 받은 아이콘에 곡 넘기기 모양이 없어 좌우 화살표를 그대로 쓴다.
+  const createSkipButton = (
+    icon: 'chevronLeft' | 'chevronRight',
+    label: string,
+  ): HTMLButtonElement => {
+    const button = el('button', 'btn-skip', createIcon(icon));
+    button.type = 'button';
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.hidden = true;
+    return button;
+  };
+  const previousButton = createSkipButton('chevronLeft', MESSAGES.previousTrack);
+  const nextButton = createSkipButton('chevronRight', MESSAGES.nextTrack);
+
   const volumeSlider = el('input', 'volume-slider');
   volumeSlider.type = 'range';
   volumeSlider.min = '0';
@@ -63,7 +78,7 @@ export function setupPlayView(container: HTMLElement, actions: PlayViewActions):
         el(
           'div',
           'controls',
-          playButton,
+          el('div', 'transport', previousButton, playButton, nextButton),
           el('div', 'volume', createIcon('volume'), volumeSlider, volumeValue),
         ),
       ),
@@ -87,6 +102,8 @@ export function setupPlayView(container: HTMLElement, actions: PlayViewActions):
     if (isSounding) window.api.requestStop();
     else window.api.requestPlay();
   });
+  previousButton.addEventListener('click', () => window.api.requestPrevious());
+  nextButton.addEventListener('click', () => window.api.requestNext());
   skipToggle.addEventListener('click', () => window.api.setSkipToday(!isToggleOn(skipToggle)));
 
   const showVolume = (percent: number): void => {
@@ -139,6 +156,8 @@ export function setupPlayView(container: HTMLElement, actions: PlayViewActions):
           textContent: isSounding ? MESSAGES.stop : MESSAGES.playNow,
         }),
       );
+      previousButton.hidden = !isSounding;
+      nextButton.hidden = !isSounding;
       setToggle(skipToggle, isSkippingToday);
 
       if (!isSounding) {

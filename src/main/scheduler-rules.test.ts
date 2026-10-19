@@ -6,6 +6,7 @@ import {
   decideTick,
   findTrackIndex,
   getFollowingTrackId,
+  getPreviousTrackId,
   INITIAL_SCHEDULER_STATE,
   toSlotKey,
   type SchedulerState,
@@ -161,6 +162,24 @@ describe('decidePlayTrack (노래 목록에서 두 번 누르기)', () => {
   it('곡을 바꾼 뒤에도 스케줄 재생은 구간이 끝나면 정지', () => {
     const playing = decidePlayTrack(runTicks([LUNCH]).state, LUNCH).state;
     expect(runTicks([LUNCH, null], playing).actions).toEqual(['none', 'stop']);
+  });
+});
+
+describe('getPreviousTrackId', () => {
+  const IDS = ['a.mp3', 'b.mp3', 'c.mp3'];
+
+  it('지금 곡 바로 위 곡', () => {
+    expect(getPreviousTrackId(IDS, 'c.mp3')).toBe('b.mp3');
+  });
+
+  it('맨 위 곡이면 맨 아래 곡', () => {
+    expect(getPreviousTrackId(IDS, 'a.mp3')).toBe('c.mp3');
+    expect(getPreviousTrackId(['a.mp3'], 'a.mp3')).toBe('a.mp3');
+  });
+
+  it('지금 곡을 모르면 null', () => {
+    expect(getPreviousTrackId(IDS, null)).toBeNull();
+    expect(getPreviousTrackId(IDS, 'deleted.mp3')).toBeNull();
   });
 });
 

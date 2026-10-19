@@ -119,6 +119,16 @@ export function findTrackIndex(trackIds: readonly string[], nextTrackId: string 
   return index === -1 ? 0 : index;
 }
 
+/** 지금 곡 바로 위 곡. 맨 위 곡이면 맨 아래 곡. 지금 곡을 모르면(목록에서 지워짐) null. */
+export function getPreviousTrackId(
+  trackIds: readonly string[],
+  currentTrackId: string | null,
+): string | null {
+  const index = currentTrackId === null ? -1 : trackIds.indexOf(currentTrackId);
+  if (index === -1) return null;
+  return trackIds[(index - 1 + trackIds.length) % trackIds.length];
+}
+
 /** index 곡 다음 곡. 마지막 곡 다음은 맨 위 곡 (FR-04). 곡이 없으면 null. */
 export function getFollowingTrackId(trackIds: readonly string[], index: number): string | null {
   if (trackIds.length === 0) return null;

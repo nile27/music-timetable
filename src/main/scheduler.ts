@@ -18,6 +18,7 @@ import {
   decideTick,
   findTrackIndex,
   getFollowingTrackId,
+  getPreviousTrackId,
   INITIAL_SCHEDULER_STATE,
   toSlotKey,
   type Decision,
@@ -88,6 +89,30 @@ export class Scheduler {
     this.apply(decideStop(this.state, this.getActiveSlotKey()), '정지 버튼');
   }
 
+  /**
+   * [다음 곡] 버튼. 재생 중일 때만 지금 곡을 건너뛴다. 모드(스케줄·수동)는 그대로라
+   * 구간 끝 정지 규칙도 그대로 적용된다. 정지 상태에서 누르면(버튼은 숨겨지지만) 아무것도 안 함.
+   */
+  requestNext(): void {
+    if (this.state.mode === 'idle') return;
+    logger.info(`[scheduler] 다음 곡 버튼: ${this.currentTrackId ?? ''} 건너뜀`);
+    this.consecutiveFailures = 0;
+    this.playFollowing();
+  }
+
+  /** [이전 곡] 버튼. 재생 중일 때만 지금 곡 바로 위 곡으로 돌아간다 (모드는 그대로). */
+  requestPrevious(): void {
+    if (this.state.mode === 'idle') return;
+    const ids = this.deps.getTracks().map((track) => track.id);
+    const previous = getPreviousTrackId(ids, this.currentTrackId);
+    if (previous === null) return;
+    logger.info(`[scheduler] 이전 곡 버튼: ${previous}`);
+    // 다음 곡을 이전 곡으로 바꿔 두고 시작하면 playNext가 그 곡을 튼다.
+    this.deps.saveNextTrackId(previous);
+    this.consecutiveFailures = 0;
+    this.playNext();
+  }
+
   /** 노래 목록에서 곡을 두 번 눌렀다 → 그 곡부터 재생 (재생 중이면 그 곡으로 바꿈). */
   requestPlayTrack(trackId: unknown): void {
     if (typeof trackId !== 'string' || !this.deps.getTracks().some((t) => t.id === trackId)) return;
@@ -132,7 +157,7 @@ export class Scheduler {
   handleEnded(trackId: unknown): void {
     if (this.state.mode === 'idle' || trackId !== this.currentTrackId) return;
     this.consecutiveFailures = 0;
-    this.playNext();
+    this.playFollowing();
   }
 
   /** 재생 실패(파일 없음·손상) → 다음 곡. 모든 곡이 실패하면 이번 구간은 포기한다. */
@@ -144,7 +169,7 @@ export class Scheduler {
       this.apply(decideStop(this.state, this.getActiveSlotKey()), '모든 곡 재생 실패');
       return;
     }
-    this.playNext();
+    this.playFollowing();
   }
 
   /** 새벽 재시작 판단용: 지금 소리를 내고 있는지. */
@@ -217,6 +242,24 @@ export class Scheduler {
       this.deps.stop();
     }
     this.publishStatusIfChanged();
+  }
+
+  /**
+   * 지금 곡 다음으로 넘어간다 (곡 끝, 재생 실패, [다음 곡] 버튼).
+   * 곡이 하나일 때 시작하면 다음 곡이 그 곡 자신으로 저장된다. 그 뒤 곡이 늘었으면
+   * 같은 곡을 또 틀지 않고 그 아래 곡으로 넘긴다.
+   */
+  private playFollowing(): void {
+    const ids = this.deps.getTracks().map((track) => track.id);
+    const index = this.currentTrackId === null ? -1 : ids.indexOf(this.currentTrackId);
+    if (
+      index !== -1 &&
+      ids.length > 1 &&
+      this.deps.getSettings().nextTrackId === this.currentTrackId
+    ) {
+      this.deps.saveNextTrackId(getFollowingTrackId(ids, index));
+    }
+    this.playNext();
   }
 
   /**
