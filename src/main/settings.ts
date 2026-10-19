@@ -9,6 +9,8 @@ export class SettingsStore {
   private settings: AppSettings = createDefaultSettings();
   /** 저장을 순서대로 하나씩 처리한다 (볼륨을 빠르게 바꿀 때 이전 저장이 나중 저장을 덮지 않게). */
   private writeQueue: Promise<void> = Promise.resolve();
+  /** 1.0.0 설정의 다음 곡 번호 (음악 폴더를 읽은 뒤 곡 이름으로 바꾼다). */
+  private legacyNextIndex: number | null = null;
 
   constructor(private readonly filePath: string) {}
 
@@ -27,12 +29,22 @@ export class SettingsStore {
       raw = null;
     }
 
-    const { settings, fixedFields } = parseSettings(raw);
+    const { settings, fixedFields, isMigrated, legacyNextIndex } = parseSettings(raw);
     this.settings = settings;
+    this.legacyNextIndex = legacyNextIndex;
+    if (isMigrated)
+      logger.info(`[settings] 1.0.0 설정을 새 형식(version ${settings.version})으로 바꿉니다`);
     if (fixedFields.length > 0) {
       logger.warn(`[settings] 기본값으로 바꾼 항목: ${fixedFields.join(', ')}`);
-      await this.save({});
     }
+    if (isMigrated || fixedFields.length > 0) await this.save({});
+  }
+
+  /** 1.0.0에서 올라온 경우 그 설정의 다음 곡 번호를 한 번만 돌려준다. */
+  takeLegacyNextIndex(): number | null {
+    const index = this.legacyNextIndex;
+    this.legacyNextIndex = null;
+    return index;
   }
 
   get(): AppSettings {

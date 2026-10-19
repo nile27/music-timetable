@@ -13,11 +13,12 @@ import type {
 } from '../shared/types';
 import {
   decideManualPlay,
+  decidePlayTrack,
   decideStop,
   decideTick,
-  getNextIndex,
+  findTrackIndex,
+  getFollowingTrackId,
   INITIAL_SCHEDULER_STATE,
-  normalizeIndex,
   toSlotKey,
   type Decision,
   type SchedulerState,
@@ -32,7 +33,7 @@ export interface SchedulerDeps {
   getSettings: () => AppSettings;
   /** 공휴일 (HolidayProvider에서 받아 둔 것). */
   getHolidays: () => ReadonlyMap<string, string>;
-  saveNextIndex: (nextIndex: number) => void;
+  saveNextTrackId: (nextTrackId: string | null) => void;
   play: (track: Track) => void;
   stop: () => void;
   publishStatus: (status: PlayerStatus) => void;
@@ -87,6 +88,34 @@ export class Scheduler {
     this.apply(decideStop(this.state, this.getActiveSlotKey()), '정지 버튼');
   }
 
+  /** 노래 목록에서 곡을 두 번 눌렀다 → 그 곡부터 재생 (재생 중이면 그 곡으로 바꿈). */
+  requestPlayTrack(trackId: unknown): void {
+    if (typeof trackId !== 'string' || !this.deps.getTracks().some((t) => t.id === trackId)) return;
+    // 다음 곡을 고른 곡으로 바꿔 두고 시작하면 playNext가 그 곡을 튼다.
+    this.deps.saveNextTrackId(trackId);
+    logger.info(`[scheduler] 곡 선택: ${trackId}`);
+    this.apply(decidePlayTrack(this.state, this.getActiveSlotKey()));
+  }
+
+  /**
+   * 곡을 지우기 직전에 부른다. 그 곡이 재생 중이면 다음 곡으로 넘긴다
+   * (Windows는 재생 중인 파일을 지우지 못하고, 지운 곡이 끝까지 나오는 것도 이상하다).
+   */
+  releaseTrack(trackId: string): void {
+    const ids = this.deps.getTracks().map((track) => track.id);
+    // 다음 곡이 지울 곡이면(곡이 하나뿐이거나 순서를 바꾼 경우) 그 아래 곡으로 미리 옮긴다.
+    if (this.deps.getSettings().nextTrackId === trackId) {
+      const following = getFollowingTrackId(ids, ids.indexOf(trackId));
+      this.deps.saveNextTrackId(following === trackId ? null : following);
+    }
+    if (this.state.mode === 'idle' || this.currentTrackId !== trackId) return;
+    if (ids.length <= 1) {
+      this.apply(decideStop(this.state, this.getActiveSlotKey()), '재생 중인 곡 삭제');
+      return;
+    }
+    this.playNext();
+  }
+
   /**
    * "오늘은 재생 안 함"을 켜면 재생 중인 음악(수동 재생 포함)을 바로 멈춘다 (S-01).
    * 끄면 다음 판정에서 구간 안이면 다시 재생된다. 날짜 저장은 호출하는 쪽이 먼저 한다.
@@ -126,8 +155,9 @@ export class Scheduler {
   getStatus(): PlayerStatus {
     const now = this.now();
     const settings = this.deps.getSettings();
-    const { schedule, nextIndex } = settings;
+    const { schedule, nextTrackId } = settings;
     const tracks = this.deps.getTracks();
+    const trackIds = tracks.map((track) => track.id);
     const context = this.getDayContext();
     const offDayReason = getOffDayReason(now, context);
     const activeSlot = offDayReason ? null : findActiveSlot(schedule, now);
@@ -138,7 +168,7 @@ export class Scheduler {
       activeSlot,
       nextPlay: findNextPlay(schedule, now, context),
       currentTrackId: this.currentTrackId,
-      nextTrackId: tracks[normalizeIndex(nextIndex, tracks.length)]?.id ?? null,
+      nextTrackId: tracks[findTrackIndex(trackIds, nextTrackId)]?.id ?? null,
       isMissingTracks: activeSlot !== null && tracks.length === 0,
     };
   }
@@ -190,7 +220,7 @@ export class Scheduler {
   }
 
   /**
-   * 저장된 nextIndex 곡을 틀고, 그 다음 번호를 바로 저장한다.
+   * 저장된 다음 곡(nextTrackId)을 틀고, 그 아래 곡을 바로 다음 곡으로 저장한다.
    * 곡이 시작될 때 저장해 두면 구간 종료로 끊기든 앱이 갑자기 꺼지든 다음 곡부터 이어진다 (FR-04·05).
    */
   private playNext(): void {
@@ -199,10 +229,11 @@ export class Scheduler {
       this.apply(decideStop(this.state, this.getActiveSlotKey()), '재생할 곡 없음');
       return;
     }
-    const index = normalizeIndex(this.deps.getSettings().nextIndex, tracks.length);
+    const ids = tracks.map((t) => t.id);
+    const index = findTrackIndex(ids, this.deps.getSettings().nextTrackId);
     const track = tracks[index];
     this.currentTrackId = track.id;
-    this.deps.saveNextIndex(getNextIndex(index, tracks.length));
+    this.deps.saveNextTrackId(getFollowingTrackId(ids, index));
     const slotName = findActiveSlot(this.deps.getSettings().schedule, this.now())?.name;
     const where = this.state.mode === 'manual' ? '직접 재생' : (slotName ?? '구간');
     logger.info(`[scheduler] 재생 시작: ${track.id} (${where})`);

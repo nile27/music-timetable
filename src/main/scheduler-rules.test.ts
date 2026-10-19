@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   decideManualPlay,
+  decidePlayTrack,
   decideStop,
   decideTick,
-  getNextIndex,
+  findTrackIndex,
+  getFollowingTrackId,
   INITIAL_SCHEDULER_STATE,
-  normalizeIndex,
   toSlotKey,
   type SchedulerState,
   type SlotKey,
@@ -126,26 +127,67 @@ describe('수동 재생·정지', () => {
   });
 });
 
-describe('getNextIndex / normalizeIndex', () => {
-  it('다음 곡 번호', () => {
-    expect(getNextIndex(0, 3)).toBe(1);
-    expect(getNextIndex(1, 3)).toBe(2);
+describe('decidePlayTrack (노래 목록에서 두 번 누르기)', () => {
+  it('구간 밖 정지 상태 → 수동 재생', () => {
+    expect(decidePlayTrack(INITIAL_SCHEDULER_STATE, null)).toEqual({
+      state: { mode: 'manual', playingSlotKey: null, suppressedSlotKey: null },
+      action: 'start',
+    });
   });
 
-  it('마지막 곡 다음은 0번 (FR-04)', () => {
-    expect(getNextIndex(2, 3)).toBe(0);
-    expect(getNextIndex(0, 1)).toBe(0);
+  it('구간 안 정지 상태 → 스케줄 재생 (구간 끝에 정지)', () => {
+    expect(decidePlayTrack(INITIAL_SCHEDULER_STATE, LUNCH).state).toEqual({
+      mode: 'playing',
+      playingSlotKey: LUNCH,
+      suppressedSlotKey: null,
+    });
   });
 
-  it('곡이 없으면 0', () => {
-    expect(getNextIndex(5, 0)).toBe(0);
+  it('구간 안에서 [정지]해 둔 상태여도 바로 재생', () => {
+    const stopped = decideStop(runTicks([LUNCH]).state, LUNCH).state;
+    const play = decidePlayTrack(stopped, LUNCH);
+    expect(play.action).toBe('start');
+    expect(play.state.mode).toBe('playing');
+    expect(play.state.suppressedSlotKey).toBeNull();
   });
 
-  it('저장된 번호가 범위를 벗어나면 0번부터 (곡을 지운 경우)', () => {
-    expect(normalizeIndex(5, 3)).toBe(0);
-    expect(normalizeIndex(-1, 3)).toBe(0);
-    expect(normalizeIndex(1.5, 3)).toBe(0);
-    expect(normalizeIndex(2, 3)).toBe(2);
-    expect(getNextIndex(5, 3)).toBe(1);
+  it.each([
+    ['스케줄 재생', runTicks([LUNCH]).state],
+    ['수동 재생', decideManualPlay(INITIAL_SCHEDULER_STATE, null, true).state],
+  ])('%s 중 → 모드는 그대로, 곡만 바꿈', (_name, state) => {
+    expect(decidePlayTrack(state, LUNCH)).toEqual({ state, action: 'start' });
+  });
+
+  it('곡을 바꾼 뒤에도 스케줄 재생은 구간이 끝나면 정지', () => {
+    const playing = decidePlayTrack(runTicks([LUNCH]).state, LUNCH).state;
+    expect(runTicks([LUNCH, null], playing).actions).toEqual(['none', 'stop']);
+  });
+});
+
+describe('findTrackIndex / getFollowingTrackId', () => {
+  const IDS = ['a.mp3', 'b.mp3', 'c.mp3'];
+
+  it('저장된 다음 곡의 위치', () => {
+    expect(findTrackIndex(IDS, 'b.mp3')).toBe(1);
+  });
+
+  it('다음 곡이 없거나 목록에 없으면 맨 위 곡부터', () => {
+    expect(findTrackIndex(IDS, null)).toBe(0);
+    expect(findTrackIndex(IDS, 'deleted.mp3')).toBe(0);
+    expect(findTrackIndex([], 'a.mp3')).toBe(0);
+  });
+
+  it('다음 곡 이름', () => {
+    expect(getFollowingTrackId(IDS, 0)).toBe('b.mp3');
+    expect(getFollowingTrackId(IDS, 1)).toBe('c.mp3');
+  });
+
+  it('마지막 곡 다음은 맨 위 곡 (FR-04)', () => {
+    expect(getFollowingTrackId(IDS, 2)).toBe('a.mp3');
+    expect(getFollowingTrackId(['a.mp3'], 0)).toBe('a.mp3');
+  });
+
+  it('곡이 없으면 null', () => {
+    expect(getFollowingTrackId([], 0)).toBeNull();
   });
 });

@@ -27,13 +27,58 @@ export function isImageFileName(fileName: string): boolean {
   return (IMAGE_EXTENSIONS as readonly string[]).includes(getExtension(fileName));
 }
 
-// 재생 순서 = 파일 이름 자연 정렬. 한글은 가나다순, 숫자는 크기순(2 < 10).
-// 연구원님이 파일 이름 앞에 번호를 붙여 순서를 바꿀 수 있고, PC를 옮겨도 순서가 유지된다.
+// 파일 이름 자연 정렬. 한글은 가나다순, 숫자는 크기순(2 < 10).
+// 재생 순서는 화면에서 바꿀 수 있고(settings.trackOrder), 한 번에 들어온 새 곡들의 순서를 정할 때 쓴다.
 const trackNameCollator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
 
 export function sortTrackNames(names: readonly string[]): string[] {
   // 대소문자만 다른 이름도 순서가 매번 같도록 마지막에 일반 문자열 비교로 정한다.
   return [...names].sort((a, b) => trackNameCollator.compare(a, b) || (a < b ? -1 : a > b ? 1 : 0));
+}
+
+/**
+ * 저장된 재생 순서(settings.trackOrder)와 폴더의 실제 파일을 맞춘다.
+ * - 순서에 없는 파일(새 곡)은 맨 위. 한 번에 여러 곡이 들어오면 그 곡들끼리는 이름순.
+ *   탐색기로 넣은 곡도 똑같이 처리된다.
+ * - 폴더에서 사라진 파일은 순서에서도 뺀다.
+ * 처음 설치하거나 1.0.0에서 올라와 순서가 비어 있으면 모두 새 곡 → 이름순이 되어 예전 순서와 같다.
+ */
+export function mergeTrackOrder(
+  savedOrder: readonly string[],
+  folderNames: readonly string[],
+): string[] {
+  const inFolder = new Set(folderNames);
+  const kept = savedOrder.filter((name, i) => inFolder.has(name) && savedOrder.indexOf(name) === i);
+  const keptSet = new Set(kept);
+  const added = sortTrackNames(folderNames.filter((name) => !keptSet.has(name)));
+  return [...added, ...kept];
+}
+
+/** 화면에서 온 새 순서가 지금 곡 목록과 같은 곡들로만 이루어졌는지 (빠지거나 겹치거나 모르는 곡 없음). */
+export function isSameTrackSet(order: readonly string[], currentIds: readonly string[]): boolean {
+  if (order.length !== currentIds.length) return false;
+  const current = new Set(currentIds);
+  return new Set(order).size === order.length && order.every((id) => current.has(id));
+}
+
+/**
+ * 목록이 바뀐 뒤 "다음 곡"을 다시 정한다.
+ * 다음 곡이 지워졌으면 예전 목록에서 그 곡 아래에 있던 곡 중 아직 남은 첫 곡으로 넘긴다
+ * (마지막 곡이었으면 맨 위로 돌아가서 찾는다). 남은 곡이 없으면 null.
+ */
+export function repairNextTrackId(
+  nextTrackId: string | null,
+  previousIds: readonly string[],
+  currentIds: readonly string[],
+): string | null {
+  if (nextTrackId === null || currentIds.includes(nextTrackId)) return nextTrackId;
+  const from = previousIds.indexOf(nextTrackId);
+  if (from === -1) return currentIds[0] ?? null;
+  for (let step = 1; step < previousIds.length; step++) {
+    const candidate = previousIds[(from + step) % previousIds.length];
+    if (currentIds.includes(candidate)) return candidate;
+  }
+  return currentIds[0] ?? null;
 }
 
 export interface DroppedFilePlan {

@@ -150,6 +150,12 @@ export const MESSAGES = {
   notAudio: (names: readonly string[]): string =>
     `음악 파일이 아니라서 제외했어요: ${names.join(', ')}`,
   addFailed: (names: readonly string[]): string => `노래를 추가하지 못했어요: ${names.join(', ')}`,
+  songsHint:
+    '두 번 누르면 바로 재생돼요. 끌어서 순서를 바꿀 수 있어요. 새 노래는 맨 위에 들어가요.',
+  deleteTrack: (title: string): string => `${title} 삭제`,
+  removed: (title: string): string => `휴지통으로 옮겼어요: ${title}`,
+  removeFailed: (title: string): string => `휴지통으로 옮기지 못했어요: ${title}`,
+  reorderFailed: '순서를 바꾸지 못했어요. 다시 시도해주세요.',
 
   // 설정 (S-04)
   settingsTitle: '설정',

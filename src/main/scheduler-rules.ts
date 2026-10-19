@@ -27,7 +27,7 @@ export const INITIAL_SCHEDULER_STATE: SchedulerState = {
   suppressedSlotKey: null,
 };
 
-/** 실행할 동작. start = nextIndex 곡부터 재생 시작, stop = 즉시 정지. */
+/** 실행할 동작. start = 다음 곡(nextTrackId)부터 재생 시작, stop = 즉시 정지. */
 export type SchedulerAction = 'start' | 'stop' | 'none';
 
 export interface Decision {
@@ -103,13 +103,24 @@ export function decideStop(state: SchedulerState, activeSlotKey: SlotKey): Decis
   };
 }
 
-/** 저장된 곡 번호가 곡 수를 넘으면(곡을 지운 경우 등) 첫 곡부터. */
-export function normalizeIndex(index: number, count: number): number {
-  return Number.isInteger(index) && index >= 0 && index < count ? index : 0;
+/**
+ * 노래 목록에서 곡을 두 번 눌렀다. 직접 고른 것이므로 [정지]로 막아 둔 구간이어도 바로 그 곡을 튼다.
+ * 정지 상태면 [재생] 버튼과 같다 (구간 안이면 스케줄 재생, 밖이면 수동 재생).
+ * 이미 재생 중이면 모드는 그대로 두고 곡만 바꾼다.
+ */
+export function decidePlayTrack(state: SchedulerState, activeSlotKey: SlotKey): Decision {
+  if (state.mode !== 'idle') return { state, action: 'start' };
+  return decideManualPlay(state, activeSlotKey, true);
 }
 
-/** 다음 곡 번호. 마지막 곡 다음은 첫 곡 (FR-04). */
-export function getNextIndex(index: number, count: number): number {
-  if (count <= 0) return 0;
-  return (normalizeIndex(index, count) + 1) % count;
+/** 다음에 틀 곡의 위치. 저장된 곡이 목록에 없으면(처음 실행, 지워진 곡) 맨 위 곡부터. */
+export function findTrackIndex(trackIds: readonly string[], nextTrackId: string | null): number {
+  const index = nextTrackId === null ? -1 : trackIds.indexOf(nextTrackId);
+  return index === -1 ? 0 : index;
+}
+
+/** index 곡 다음 곡. 마지막 곡 다음은 맨 위 곡 (FR-04). 곡이 없으면 null. */
+export function getFollowingTrackId(trackIds: readonly string[], index: number): string | null {
+  if (trackIds.length === 0) return null;
+  return trackIds[(index + 1) % trackIds.length];
 }

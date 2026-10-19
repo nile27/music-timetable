@@ -43,14 +43,20 @@ export interface ScheduleSlot {
 
 /** settings.json 구조 (아키텍처 5장). 구조가 바뀌면 version을 올리고 변환 코드를 추가한다. */
 export interface AppSettings {
-  version: 1;
+  version: 2;
   schedule: ScheduleSlot[];
   /** 사용자가 지정한 쉬는 날 "YYYY-MM-DD" (4단계). */
   offDays: string[];
   /** "오늘은 재생 안 함"을 켠 날짜 (4단계). */
   skipDate: string | null;
-  /** 다음에 재생할 곡 번호. 곡이 시작될 때마다 그 다음 번호로 저장한다. */
-  nextIndex: number;
+  /** 재생 순서: 음악 폴더 안의 파일 이름 목록. 새 곡은 맨 위에 들어간다. */
+  trackOrder: string[];
+  /**
+   * 다음에 재생할 곡의 파일 이름. 곡이 시작될 때마다 그 다음 곡으로 저장한다.
+   * 번호가 아니라 이름인 이유: 새 곡이 맨 위에 들어가거나 순서를 바꾸면 번호는 다른 곡을 가리킨다.
+   * null이거나 목록에 없으면 맨 위 곡부터.
+   */
+  nextTrackId: string | null;
   /** 0~1 */
   volume: number;
   /** PC 켜질 때 자동 실행 (5단계). */
@@ -122,6 +128,8 @@ export interface AppInfo {
 export interface RendererApi {
   requestPlay: () => void;
   requestStop: () => void;
+  /** 노래 목록에서 고른 곡부터 재생한다 (재생 중이면 그 곡으로 바꾼다). */
+  playTrack: (trackId: string) => void;
   /** 메인의 재생 지시를 받는다. 반환값을 호출하면 구독이 해제된다. */
   onPlay: (listener: (track: Track) => void) => () => void;
   onStop: (listener: () => void) => () => void;
@@ -132,6 +140,10 @@ export interface RendererApi {
   /** 드롭한 파일을 음악 폴더로 복사한다. 경로 변환은 preload가 한다. */
   addFiles: (files: readonly File[]) => Promise<AddFilesResult>;
   openMusicFolder: () => void;
+  /** 곡 파일을 휴지통으로 옮긴다. 성공하면 true (목록은 onLibraryChanged로 따로 온다). */
+  removeTrack: (trackId: string) => Promise<boolean>;
+  /** 재생 순서를 바꾼다. trackIds는 지금 곡 전체를 새 순서로 나열한 것. */
+  reorderTracks: (trackIds: readonly string[]) => Promise<boolean>;
 
   /** 곡이 끝났다 / 재생에 실패했다 (main이 다음 곡을 정한다). */
   notifyEnded: (trackId: string) => void;

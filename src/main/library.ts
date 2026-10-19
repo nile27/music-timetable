@@ -1,15 +1,18 @@
-// LibraryManager: 음악 폴더 읽기·감시, 드롭된 파일 복사, 태그 정리.
+// LibraryManager: 음악 폴더 읽기·감시, 드롭된 파일 복사·삭제, 재생 순서, 태그 정리.
 import { constants, watch, type FSWatcher } from 'node:fs';
 import { copyFile, mkdir, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { shell } from 'electron';
 import { toMediaUrl } from '../shared/media-url';
 import type { AddFilesResult, LibraryTrack } from '../shared/types';
 import {
   isAudioFileName,
   isImageFileName,
+  isSameTrackSet,
+  mergeTrackOrder,
   pickDefaultCover,
   planDroppedFiles,
-  sortTrackNames,
   toTrackInfo,
 } from './library-rules';
 import { readTrackTags, type TrackTags } from './track-tags';
@@ -19,6 +22,19 @@ import { logger } from './logger';
 const RESCAN_DEBOUNCE_MS = 300;
 // 감시가 끊기면(폴더 삭제 등) 잠시 뒤 폴더를 다시 만들고 감시를 재시작한다.
 const WATCH_RETRY_MS = 2000;
+// 재생 중이던 곡을 지울 때: 다음 곡으로 넘긴 직후에는 Windows가 아직 파일을 잡고 있을 수 있어 몇 번 다시 시도한다.
+const REMOVE_RETRY_COUNT = 4;
+const REMOVE_RETRY_MS = 500;
+
+export interface MusicLibraryOptions {
+  musicDir: string;
+  defaultCoverDir: string;
+  /** 저장된 재생 순서 (settings.trackOrder). */
+  getOrder: () => readonly string[];
+  saveOrder: (order: string[]) => void;
+  /** 목록이 바뀌었다. previous는 바뀌기 전 목록 (지워진 곡의 다음 곡을 찾는 데 쓴다). */
+  onChange: (tracks: LibraryTrack[], previous: readonly LibraryTrack[]) => void;
+}
 
 interface CachedTags {
   mtimeMs: number;
@@ -37,11 +53,13 @@ export class MusicLibrary {
   private scanning: Promise<void> | null = null;
   private isRescanQueued = false;
 
-  constructor(
-    private readonly musicDir: string,
-    private readonly defaultCoverDir: string,
-    private readonly onChange: (tracks: LibraryTrack[]) => void,
-  ) {}
+  private readonly musicDir: string;
+  private readonly defaultCoverDir: string;
+
+  constructor(private readonly options: MusicLibraryOptions) {
+    this.musicDir = options.musicDir;
+    this.defaultCoverDir = options.defaultCoverDir;
+  }
 
   async start(): Promise<void> {
     await this.ensureMusicDir();
@@ -59,6 +77,51 @@ export class MusicLibrary {
 
   getTracks(): LibraryTrack[] {
     return this.tracks;
+  }
+
+  hasTrack(trackId: string): boolean {
+    return this.tracks.some((track) => track.id === trackId);
+  }
+
+  /** 재생 순서를 바꾼다. 지금 곡들을 빠짐없이 다시 나열한 목록만 받는다 (화면에서 온 값). */
+  reorder(trackIds: readonly string[]): boolean {
+    if (
+      !isSameTrackSet(
+        trackIds,
+        this.tracks.map((track) => track.id),
+      )
+    )
+      return false;
+    const byId = new Map(this.tracks.map((track) => [track.id, track]));
+    const previous = this.tracks;
+    this.options.saveOrder([...trackIds]);
+    this.tracks = trackIds.map((id) => byId.get(id) as LibraryTrack);
+    this.options.onChange(this.tracks, previous);
+    return true;
+  }
+
+  /**
+   * 곡 파일을 휴지통으로 옮긴다 (잘못 지워도 휴지통에서 되살릴 수 있게).
+   * trackId는 목록에 있는 파일 이름만 받으므로 음악 폴더 밖 파일은 지울 수 없다.
+   */
+  async removeTrack(trackId: string): Promise<boolean> {
+    if (!this.hasTrack(trackId)) return false;
+    const filePath = path.join(this.musicDir, trackId);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await shell.trashItem(filePath);
+        break;
+      } catch (error) {
+        if (attempt >= REMOVE_RETRY_COUNT) {
+          logger.warn(`[library] 휴지통으로 옮기지 못했습니다: ${trackId}`, error);
+          return false;
+        }
+        await sleep(REMOVE_RETRY_MS);
+      }
+    }
+    logger.info(`[library] 휴지통으로 옮김: ${trackId}`);
+    await this.rescan();
+    return true;
   }
 
   /** 드롭된 파일을 음악 폴더로 복사한다. 경로는 화면에서 온 값이므로 여기서 다시 검사한다. */
@@ -143,7 +206,10 @@ export class MusicLibrary {
   }
 
   private async scanOnce(): Promise<void> {
-    const names = sortTrackNames(await this.readAudioFileNames());
+    const savedOrder = this.options.getOrder();
+    const names = mergeTrackOrder(savedOrder, await this.readAudioFileNames());
+    // 새 곡이 맨 위에 붙은 순서를 저장해 둬야 다음에 또 곡이 들어와도 그 위에 쌓인다.
+    if (!isSameOrder(savedOrder, names)) this.options.saveOrder(names);
     const tracks: LibraryTrack[] = [];
 
     for (const fileName of names) {
@@ -171,8 +237,9 @@ export class MusicLibrary {
     }
 
     if (!isSameTrackList(this.tracks, tracks)) {
+      const previous = this.tracks;
       this.tracks = tracks;
-      this.onChange(tracks);
+      this.options.onChange(tracks, previous);
     }
   }
 
@@ -237,6 +304,10 @@ export class MusicLibrary {
         });
     }, WATCH_RETRY_MS);
   }
+}
+
+function isSameOrder(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((name, i) => name === b[i]);
 }
 
 function isSameTrackList(a: readonly LibraryTrack[], b: readonly LibraryTrack[]): boolean {

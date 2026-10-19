@@ -79,6 +79,13 @@
   white-space: pre-line;
 }
 
+/* 목록 사용법 안내 (Figma에 없는 요소라 보조 글자 스타일로 작게) */
+.songs-hint {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--text-3);
+}
+
 /* 곡 목록 */
 .song-list {
   display: flex;
@@ -86,7 +93,7 @@
   flex-direction: column;
   gap: 4px;
   min-height: 0;
-  margin: 16px 0 0;
+  margin: 8px 0 0;
   padding: 0;
   overflow-y: auto;
   list-style: none;
@@ -100,6 +107,49 @@
   height: 56px;
   padding: 0 14px;
   border-radius: var(--r-12);
+}
+
+/* 두 번 누르기·끌기를 하므로 글자가 선택되지 않게 한다. */
+.song-row {
+  cursor: grab;
+  user-select: none;
+}
+
+.song-row:hover {
+  background: var(--surface-2);
+}
+
+.song-row.is-dragging {
+  opacity: 0.4;
+}
+
+/* 끌고 있는 곡이 들어갈 자리 표시선 */
+.song-row.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--state-playing);
+}
+
+.song-row.is-drop-after {
+  box-shadow: inset 0 -2px 0 var(--state-playing);
+}
+
+/* 시간표 화면의 삭제 버튼(.slot-delete)과 같은 모양 */
+.song-delete {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--r-10);
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.song-delete:hover,
+.song-delete:focus-visible {
+  background: var(--surface-3);
+  color: var(--text-1);
 }
 
 .song-row.is-now {

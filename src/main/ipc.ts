@@ -48,6 +48,9 @@ export function registerIpcHandlers(services: AppServices): void {
   // 무엇을 틀지는 메인(스케줄러)이 정한다 (판단은 main, 소리는 renderer).
   ipcMain.on(IPC.PLAYER_REQUEST_PLAY, () => scheduler.requestPlay());
   ipcMain.on(IPC.PLAYER_REQUEST_STOP, () => scheduler.requestStop());
+  ipcMain.on(IPC.PLAYER_REQUEST_PLAY_TRACK, (_event, trackId: unknown) =>
+    scheduler.requestPlayTrack(trackId),
+  );
   ipcMain.on(IPC.PLAYER_ENDED, (_event, trackId: unknown) => scheduler.handleEnded(trackId));
   ipcMain.on(IPC.PLAYER_ERROR, (_event, trackId: unknown) => scheduler.handleError(trackId));
   ipcMain.handle(IPC.STATUS_GET, () => scheduler.getStatus());
@@ -104,6 +107,17 @@ export function registerIpcHandlers(services: AppServices): void {
 
   ipcMain.handle(IPC.LIBRARY_LIST, () => library.getTracks());
   ipcMain.handle(IPC.LIBRARY_ADD, (_event, paths: unknown) => library.addFiles(toPathList(paths)));
+  ipcMain.handle(IPC.LIBRARY_REMOVE, async (_event, trackId: unknown): Promise<boolean> => {
+    // 목록에 있는 파일 이름만 받는다 (경로를 섞어 음악 폴더 밖 파일을 지우지 못하게).
+    if (typeof trackId !== 'string' || !library.hasTrack(trackId)) return false;
+    scheduler.releaseTrack(trackId);
+    return library.removeTrack(trackId);
+  });
+  ipcMain.handle(IPC.LIBRARY_REORDER, (_event, value: unknown): boolean => {
+    const ok = library.reorder(toPathList(value));
+    if (ok) logger.info('[library] 재생 순서 변경');
+    return ok;
+  });
   ipcMain.on(IPC.LIBRARY_OPEN_FOLDER, () => {
     void shell.openPath(musicDir).then((error) => {
       if (error) logger.warn(`[library] 폴더를 열지 못했습니다: ${error}`);

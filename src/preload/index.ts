@@ -24,6 +24,7 @@ function subscribe<T>(channel: string, listener: (payload: T) => void): () => vo
 const api: RendererApi = {
   requestPlay: () => ipcRenderer.send(IPC.PLAYER_REQUEST_PLAY),
   requestStop: () => ipcRenderer.send(IPC.PLAYER_REQUEST_STOP),
+  playTrack: (trackId) => ipcRenderer.send(IPC.PLAYER_REQUEST_PLAY_TRACK, trackId),
   onPlay: (listener) => subscribe<Track>(IPC.PLAYER_PLAY, listener),
   onStop: (listener) => subscribe<void>(IPC.PLAYER_STOP, () => listener()),
 
@@ -35,6 +36,9 @@ const api: RendererApi = {
     return ipcRenderer.invoke(IPC.LIBRARY_ADD, paths) as Promise<AddFilesResult>;
   },
   openMusicFolder: () => ipcRenderer.send(IPC.LIBRARY_OPEN_FOLDER),
+  removeTrack: (trackId) => ipcRenderer.invoke(IPC.LIBRARY_REMOVE, trackId) as Promise<boolean>,
+  reorderTracks: (trackIds) =>
+    ipcRenderer.invoke(IPC.LIBRARY_REORDER, trackIds) as Promise<boolean>,
 
   notifyEnded: (trackId) => ipcRenderer.send(IPC.PLAYER_ENDED, trackId),
   notifyError: (trackId) => ipcRenderer.send(IPC.PLAYER_ERROR, trackId),

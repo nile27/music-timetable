@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   isAudioFileName,
   isImageFileName,
+  isSameTrackSet,
+  mergeTrackOrder,
   pickDefaultCover,
   planDroppedFiles,
+  repairNextTrackId,
   sortTrackNames,
   toTrackInfo,
 } from './library-rules';
@@ -143,5 +146,88 @@ describe('toTrackInfo', () => {
   it('제목 태그가 없거나 비어 있으면 파일 이름(확장자 제외)', () => {
     expect(toTrackInfo('아침 노래.mp3', {})).toEqual({ title: '아침 노래', artist: '' });
     expect(toTrackInfo('a.b.mp3', { title: '  ' })).toEqual({ title: 'a.b', artist: '' });
+  });
+});
+
+describe('mergeTrackOrder', () => {
+  it('저장된 순서를 따른다', () => {
+    expect(mergeTrackOrder(['c.mp3', 'a.mp3', 'b.mp3'], ['a.mp3', 'b.mp3', 'c.mp3'])).toEqual([
+      'c.mp3',
+      'a.mp3',
+      'b.mp3',
+    ]);
+  });
+
+  it('새 곡은 맨 위, 한 번에 들어온 새 곡들끼리는 이름순', () => {
+    expect(mergeTrackOrder(['b.mp3', 'a.mp3'], ['a.mp3', 'b.mp3', '10.mp3', '2.mp3'])).toEqual([
+      '2.mp3',
+      '10.mp3',
+      'b.mp3',
+      'a.mp3',
+    ]);
+  });
+
+  it('폴더에서 사라진 곡은 뺀다', () => {
+    expect(mergeTrackOrder(['b.mp3', 'x.mp3', 'a.mp3'], ['a.mp3', 'b.mp3'])).toEqual([
+      'b.mp3',
+      'a.mp3',
+    ]);
+  });
+
+  it('순서가 비어 있으면(처음 설치, 1.0.0에서 올라옴) 이름순 = 1.0.0의 순서', () => {
+    const names = ['하늘.mp3', '10_나무.mp3', '2_가을.mp3'];
+    expect(mergeTrackOrder([], names)).toEqual(sortTrackNames(names));
+  });
+
+  it('저장된 순서에 같은 이름이 두 번 있으면(손으로 고친 파일) 한 번만', () => {
+    expect(mergeTrackOrder(['a.mp3', 'b.mp3', 'a.mp3'], ['a.mp3', 'b.mp3'])).toEqual([
+      'a.mp3',
+      'b.mp3',
+    ]);
+  });
+});
+
+describe('isSameTrackSet', () => {
+  const IDS = ['a.mp3', 'b.mp3', 'c.mp3'];
+
+  it('순서만 바뀐 같은 곡들 → true', () => {
+    expect(isSameTrackSet(['c.mp3', 'a.mp3', 'b.mp3'], IDS)).toBe(true);
+  });
+
+  it.each([
+    ['빠진 곡', ['a.mp3', 'b.mp3']],
+    ['겹친 곡', ['a.mp3', 'a.mp3', 'b.mp3']],
+    ['모르는 곡', ['a.mp3', 'b.mp3', '../x.mp3']],
+  ])('%s → false', (_name, order) => {
+    expect(isSameTrackSet(order, IDS)).toBe(false);
+  });
+});
+
+describe('repairNextTrackId', () => {
+  const BEFORE = ['a.mp3', 'b.mp3', 'c.mp3'];
+
+  it('다음 곡이 남아 있으면 그대로 (새 곡이 맨 위에 들어와도 이어서 재생)', () => {
+    expect(repairNextTrackId('b.mp3', BEFORE, ['new.mp3', ...BEFORE])).toBe('b.mp3');
+  });
+
+  it('다음 곡이 지워지면 그 아래 곡', () => {
+    expect(repairNextTrackId('b.mp3', BEFORE, ['a.mp3', 'c.mp3'])).toBe('c.mp3');
+  });
+
+  it('아래 곡도 지워졌으면 더 아래, 끝이면 맨 위로 돌아가서 찾는다', () => {
+    expect(repairNextTrackId('b.mp3', BEFORE, ['a.mp3'])).toBe('a.mp3');
+    expect(repairNextTrackId('c.mp3', BEFORE, ['a.mp3', 'b.mp3'])).toBe('a.mp3');
+  });
+
+  it('곡이 하나도 안 남으면 null', () => {
+    expect(repairNextTrackId('b.mp3', BEFORE, [])).toBeNull();
+  });
+
+  it('예전 목록에도 없던 이름이면 맨 위 곡', () => {
+    expect(repairNextTrackId('x.mp3', BEFORE, BEFORE)).toBe('a.mp3');
+  });
+
+  it('null은 그대로 (맨 위 곡부터)', () => {
+    expect(repairNextTrackId(null, BEFORE, BEFORE)).toBeNull();
   });
 });

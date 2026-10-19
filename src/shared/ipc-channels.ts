@@ -5,6 +5,8 @@ export const IPC = {
   PLAYER_REQUEST_PLAY: 'player:requestPlay',
   /** 화면 → 메인: 정지 버튼을 눌렀다. */
   PLAYER_REQUEST_STOP: 'player:requestStop',
+  /** 화면 → 메인: 노래 목록에서 곡을 두 번 눌렀다 (트랙 id). 그 곡부터 재생한다. */
+  PLAYER_REQUEST_PLAY_TRACK: 'player:requestPlayTrack',
   /** 메인 → 화면: 이 곡을 재생하라 (Track). */
   PLAYER_PLAY: 'player:play',
   /** 메인 → 화면: 즉시 정지하라. */
@@ -46,6 +48,10 @@ export const IPC = {
   LIBRARY_ADD: 'library:add',
   /** 화면 → 메인: 음악 폴더를 탐색기로 연다. */
   LIBRARY_OPEN_FOLDER: 'library:openFolder',
+  /** 화면 → 메인 (invoke): 곡을 휴지통으로 옮긴다 (트랙 id) → boolean(성공 여부) */
+  LIBRARY_REMOVE: 'library:remove',
+  /** 화면 → 메인 (invoke): 재생 순서를 바꾼다 (트랙 id 전체 목록) → boolean(받아들였는지) */
+  LIBRARY_REORDER: 'library:reorder',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

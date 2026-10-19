@@ -6,10 +6,12 @@ import { getDefaultCoverDir, getMusicDir } from './app-paths';
 import { bundledHolidayProvider, toHolidayMap } from './holiday-provider';
 import { registerIpcHandlers } from './ipc';
 import { MusicLibrary } from './library';
+import { repairNextTrackId } from './library-rules';
 import { logger } from './logger';
 import { handleMediaProtocol, registerMediaScheme, setMediaRoots } from './media-protocol';
 import { Scheduler } from './scheduler';
 import { SettingsStore } from './settings';
+import { migrateNextIndex } from './settings-rules';
 import { applyAutoLaunch, isLaunchedAtLogin, startRestartWatcher } from './system';
 import { createMainWindow, revealWindow } from './window';
 
@@ -46,11 +48,31 @@ async function startApp(): Promise<void> {
   await settings.load();
   applyAutoLaunch(settings.get().autoLaunch);
 
-  const library = new MusicLibrary(musicDir, defaultCoverDir, (tracks) =>
-    sendToWindows(IPC.LIBRARY_CHANGED, tracks),
-  );
+  const library = new MusicLibrary({
+    musicDir,
+    defaultCoverDir,
+    getOrder: () => settings.get().trackOrder,
+    saveOrder: (trackOrder) => void settings.save({ trackOrder }),
+    onChange: (tracks, previous) => {
+      // 다음 곡이 지워졌으면(앱의 휴지통 버튼이든 탐색기든) 그 아래 곡으로 넘긴다.
+      const { nextTrackId } = settings.get();
+      const repaired = repairNextTrackId(
+        nextTrackId,
+        previous.map((track) => track.id),
+        tracks.map((track) => track.id),
+      );
+      if (repaired !== nextTrackId) void settings.save({ nextTrackId: repaired });
+      sendToWindows(IPC.LIBRARY_CHANGED, tracks);
+    },
+  });
   // 음악 폴더를 먼저 만들어야 realpath로 허용 폴더를 정할 수 있다.
   await library.start();
+  const legacyNextIndex = settings.takeLegacyNextIndex();
+  if (legacyNextIndex !== null) {
+    // 1.0.0은 이름순 번호로 저장했다. 첫 읽기 결과가 이름순이므로 같은 곡을 찾을 수 있다.
+    const ids = library.getTracks().map((track) => track.id);
+    await settings.save({ nextTrackId: migrateNextIndex(legacyNextIndex, ids) });
+  }
   await setMediaRoots({ music: [musicDir], defaultCovers: [defaultCoverDir] });
   handleMediaProtocol();
 
@@ -70,7 +92,7 @@ async function startApp(): Promise<void> {
     getTracks: () => library.getTracks(),
     getSettings: () => settings.get(),
     getHolidays: () => holidayMap,
-    saveNextIndex: (nextIndex) => void settings.save({ nextIndex }),
+    saveNextTrackId: (nextTrackId) => void settings.save({ nextTrackId }),
     play: (track) => sendToWindows(IPC.PLAYER_PLAY, track),
     stop: () => sendToWindows(IPC.PLAYER_STOP),
     publishStatus: (status) => sendToWindows(IPC.STATUS_UPDATE, status),
