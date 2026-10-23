@@ -59,6 +59,60 @@
 
 ## 구조
 
+```mermaid
+flowchart TB
+  subgraph REN["renderer - 화면과 소리"]
+    direction LR
+    VIEWS["재생, 시간표, 노래, 설정 탭"]
+    PLAYER["player.ts<br/>HTML5 Audio"]
+  end
+
+  subgraph PRE["preload"]
+    API["window.api<br/>contextBridge"]
+  end
+
+  subgraph MAIN["main 프로세스 - 판단"]
+    IPC["ipc.ts<br/>받은 값 다시 검사"]
+    SCH["Scheduler<br/>1초마다 판정"]
+    RULES["scheduler-rules, day-rules<br/>순수 함수"]
+    HP["HolidayProvider"]
+    LIB["MusicLibrary<br/>폴더 감시, 복사, 휴지통, 순서"]
+    SET["SettingsStore<br/>구조 검사, 원자적 저장"]
+    MEDIA["media 프로토콜<br/>허용 폴더만 읽기"]
+    SYS["index, system, window<br/>중복 실행 방지, 자동 실행, 새벽 재시작"]
+  end
+
+  subgraph OS["Windows 파일"]
+    direction LR
+    MUSIC[("음악 폴더")]
+    SETTINGS[("settings.json")]
+    HOLI[("holidays.json")]
+    LOG[("main.log")]
+  end
+
+  VIEWS -->|"1. 버튼, 드롭, 저장"| API
+  PLAYER -->|"4. 곡 끝, 재생 실패"| API
+  API -->|"send, invoke"| IPC
+  IPC --> SCH
+  IPC --> LIB
+  IPC --> SET
+  SCH --> RULES
+  RULES -.->|휴무일| HP
+  SCH -->|"2. 재생, 정지, 상태"| API
+  LIB -->|"목록 변경"| API
+  API --> VIEWS
+  API --> PLAYER
+  PLAYER -->|"3. 음악 파일 요청"| MEDIA
+
+  MEDIA --> MUSIC
+  LIB <--> MUSIC
+  SET <--> SETTINGS
+  HP --> HOLI
+  SYS -.-> LOG
+```
+
+화살표 번호 순서: 1. 화면 조작 → 2. main이 판정해서 재생·정지 지시 → 3. 음악 파일 요청 → 4. 곡 끝을 main에 알림
+
 ```
 src/
 ├─ main/      판단 담당: 스케줄러, 음악 폴더, 설정, 휴무일, 자동 실행·재시작, 창, IPC, media:// 프로토콜
